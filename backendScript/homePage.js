@@ -4,7 +4,7 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             res.sendFile(path.join(__dirname, "../Frontend/homePageTeacher.html"));
         }
         else if (req.session.user && req.session.user.userType == 0){
-            res.sendFile(path.join(__dirname, "../Frontend/homePageStudent.html")) //This file has not actually been created yet...
+            res.sendFile(path.join(__dirname, "../Frontend/homePageStudent.html"));
         }
         else{
             res.redirect("http://localhost:4000/login");
