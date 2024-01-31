@@ -7,18 +7,61 @@ module.exports = function (app, path, session, db){
     let sockets = []
     let games = [] //this will contain a list of active games with details of users and hosts.
     var nextQuizID = 0;
+
+    function deleteSocket(socket){
+        var index = sockets.indexOf(socket);
+        sockets.splice(index, 1);
+        if(socket.type == 1){
+            let gameToDelete = games.filter((x) => {return x.gameID == socket.id});
+            index = games.indexOf(gameToDelete);
+            games.splice(index, 1);
+        }
+    }
+
     socketServer.on("connection", (socket) => {
         sockets.push(socket);
-        console.log("Socket Connected");
+        socket.type = 0
+        /*
+        SOCKET IDS:
+        0-UNINITIALISED
+        1-HOST
+        2-PLAYER
+        */
+        let serverCount = 0;
+        let clientCount = 0;
+        var keepAlive = setInterval(() => {
+            if (serverCount != clientCount){
+                deleteSocket(socket);
+                clearInterval(keepAlive);
+                return;
+            }
+            serverCount++;
+            socket.send(JSON.stringify({type: "ping"}));
+        }, 500);
         socket.on("message", (data) => {
-
+            data = JSON.parse(data);
+            if(data.type == "init"){
+                socket.type = 1
+                jsonObj = {
+                    hostID: data.userID,
+                    quizID: data.quizID,
+                    gameID: nextQuizID,
+                    currState: 0,
+                    currQuestion: 0,
+                    classID: data.classID,
+                    players: []
+                }
+                socket.id=nextQuizID;
+                nextQuizID++;
+                games.push(jsonObj);
+            }
+            else if (data.type == "pong"){
+                clientCount++;
+            }
         });
     });
     socketServer.on("disconnect", (socket) => {
-        var index = sockets.indexOf(socket);
-        sockets.splice(index, 1);
-        //There will be more logic here to determine what to do if a host or player disconnects.
-        //i.e. end the game if the host disconnects or just remove the users entry if a player disconnects.
+        deleteSocket(socket);
     });
 
     app.get("/quizSelect", (req, res) => {
@@ -46,23 +89,12 @@ module.exports = function (app, path, session, db){
         });
     });
 
-    app.post("/startQuiz", (req, res) => {
-        var quizID = req.body.quizID;
-        var classID = req.body.classID;
-        var userID = req.session.user.userID;
-        let tempJSON = {
-            host: userID,
-            classID: classID,
-            quizID: quizID,
-            currQuestion: 0,
-            users: [],
-            quizSessionID: nextQuizID
-        }
-        nextQuizID++;
-        res.json({res: true, quizSessionID: nextQuizID-1, userID: userID});
-    });
-
     app.get("/quizHost", (req, res) => {
-        res.send("test");
+        if(req.session.user && req.session.user.userType == 1){
+            res.sendFile(path.join(__dirname, "../Frontend/quizHost.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
     })
 }

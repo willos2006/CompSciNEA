@@ -29,13 +29,6 @@ $(document).ready(() => {
     $("#goButton").on("click", () => {
         let classID = $("#classSelect").val();
         let quizID = $("#quizSelect").val();
-        $.post("/startQuiz", {classID: classID, quizID: quizID} ,(data) => {
-            if (data.res == true){
-                window.location = "http://localhost:4000/quizHost?sessionID=" + data.quizSessionID + "?userID=" + data.userID;
-            }
-            else{
-                alert("There was an error. Please try again");
-            }
-        });
+        window.location = `http://localhost:4000/quizHost?classID=${classID}&quizID=${quizID}`;
     })
 });

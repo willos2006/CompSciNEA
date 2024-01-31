@@ -46,4 +46,8 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             res.redirect("http://localhost:4000/home");
         }
     });
+
+    app.post("/getUserID", (req, res) => {
+        res.json({userID: req.session.user.userID});
+    });
 }
