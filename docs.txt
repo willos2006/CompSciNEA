@@ -1,0 +1,3 @@
+userType (in session):
+    0 - Student
+    1 - Teacher
