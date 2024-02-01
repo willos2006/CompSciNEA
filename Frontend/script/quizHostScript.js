@@ -38,5 +38,8 @@ $(document).ready(() => {
         else if (message.type == "userJoin" && state == 0){
             $("#playerList").append(`<li class="playerEntry" id=${message.userID}>${message.username}</li>`);
         }
+        else if (message.type == "userLeave" && state == 0){
+            $(`#${message.userID}`).remove();
+        }
     }
-})
+});

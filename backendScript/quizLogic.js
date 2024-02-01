@@ -7,6 +7,7 @@ module.exports = function (app, path, session, db){
     let sockets = []
     let games = [] //this will contain a list of active games with details of users and hosts.
     var nextQuizID = 0;
+    var nextUserID = 0;
 
     function deleteSocket(socket){
         var index = sockets.indexOf(socket);
@@ -15,6 +16,9 @@ module.exports = function (app, path, session, db){
             let gameToDelete = games.filter((x) => {return x.gameID == socket.id});
             index = games.indexOf(gameToDelete);
             games.splice(index, 1);
+        }
+        else if (socket.type == 2){
+            //code here once joing code is established
         }
     }
 
@@ -59,6 +63,27 @@ module.exports = function (app, path, session, db){
             else if (data.type == "pong"){
                 clientCount++;
             }
+            else if (data.type == "joinGame"){
+                socket.type == 2;
+                let gameID = data.gameID;
+                let userID = data.userID;
+                socket.id = nextUserID;
+                nextUserID++;
+                let username = data.username;
+                let tempArray = games.filter((x)=>{return x.gameID == gameID});
+                var index = games.indexOf(tempArray);
+                var userJson = {
+                    userID: userID,
+                    uniqueID: nextUserID - 1,
+                    username: username,
+                    score: 0,
+                    questionsCompleted: [] //after each question the time taken to answer and result is stored so it can be saved later on and used for analytics
+                }
+                games[index].push(userJson);
+                tempArray = sockets.filter((x) => {return x.id == games[index].gameID});
+                index = sockets.indexOf(tempArray);
+                sockets[index].send(JSON.stringify({type: "userJoin", userID: userID, username: username}));
+            }
         });
     });
     socketServer.on("disconnect", (socket) => {
@@ -82,7 +107,7 @@ module.exports = function (app, path, session, db){
                 if (err) throw (err);
                 //This fetches the length of the quizzes. (When the database grows this may be too slow)
                 for (var i = 0; i < initialRes.length; i++){
-                    let newArr = results.filter((x) => {return x.quizID == initialRes[i].quizID});
+                    let newArr = results.filter((x) => {return x.quizID == initialRes[i].quizID}); //FIX THIS :(
                     initialRes[i].questionNo = newArr.length;
                 }
                 res.json(initialRes);
@@ -98,4 +123,24 @@ module.exports = function (app, path, session, db){
             res.redirect("http://localhost:4000/");
         }
     });
+
+    app.post("/getQuizzesByClass", (req, res) => {
+        var userID = req.session.user.userID;
+        db.query("SELECT classID from classmap WHERE userID = ?", [userID], (err, results) => {
+            if (err) throw (err);
+            var idList = [];
+            results.map((x) => {idList.push(x.classID)});
+            var gamesList = games.filter((x) => {return idList.includes(x.classID);});
+            res.json({gamesList: gamesList});
+        });
+    });
+
+    app.get("/joinQuiz", (req, res) => {
+        if(req.session.user && req.session.user.userType == 0){
+            res.sendFile(path.join(__dirname, "../Frontend/quizJoin.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
+    })
 }

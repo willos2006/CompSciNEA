@@ -65,5 +65,5 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             if (err) throw err;
             res.json({quizName: results[0].bio});
         });
-    })
+    });
 }
