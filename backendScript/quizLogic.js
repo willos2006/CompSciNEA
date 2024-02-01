@@ -107,7 +107,7 @@ module.exports = function (app, path, session, db){
                 if (err) throw (err);
                 //This fetches the length of the quizzes. (When the database grows this may be too slow)
                 for (var i = 0; i < initialRes.length; i++){
-                    let newArr = results.filter((x) => {return x.quizID == initialRes[i].quizID}); //FIX THIS :(
+                    let newArr = results.filter((x) => {return x.quizID == initialRes[i].quizID});
                     initialRes[i].questionNo = newArr.length;
                 }
                 res.json(initialRes);
@@ -130,7 +130,7 @@ module.exports = function (app, path, session, db){
             if (err) throw (err);
             var idList = [];
             results.map((x) => {idList.push(x.classID)});
-            var gamesList = games.filter((x) => {return idList.includes(x.classID);});
+            var gamesList = games.filter((x) => {return idList.includes(Number(x.classID));});
             res.json({gamesList: gamesList});
         });
     });
