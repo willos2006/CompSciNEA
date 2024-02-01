@@ -50,4 +50,20 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
     app.post("/getUserID", (req, res) => {
         res.json({userID: req.session.user.userID});
     });
+
+    app.post("/getClassNameByID", (req, res) => {
+        var classID = req.body.classID;
+        db.query("SELECT quickName FROM classes WHERE classID=?", [classID], (err, results) => {
+            if (err) throw err;
+            res.json({className: results[0].quickName});
+        });
+    });
+
+    app.post("/getQuizNameByID", (req, res) => {
+        var quizID =  req.body.quizID;
+        db.query("SELECT bio FROM quiz WHERE quizID=?", [quizID], (err, results) => {
+            if (err) throw err;
+            res.json({quizName: results[0].bio});
+        });
+    })
 }

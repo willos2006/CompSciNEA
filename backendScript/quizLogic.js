@@ -27,6 +27,7 @@ module.exports = function (app, path, session, db){
         1-HOST
         2-PLAYER
         */
+       //keep alive script to check that the client is still listeing. If not, it will delete the connection and remove from lists
         let serverCount = 0;
         let clientCount = 0;
         var keepAlive = setInterval(() => {
@@ -96,5 +97,5 @@ module.exports = function (app, path, session, db){
         else{
             res.redirect("http://localhost:4000/");
         }
-    })
+    });
 }
