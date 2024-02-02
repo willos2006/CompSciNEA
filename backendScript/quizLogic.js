@@ -30,10 +30,10 @@ module.exports = function (app, path, session, db){
             if (tempGames.length > 0){
                 let tempArr = sockets.filter((x) => {return x.id == tempGames[0].gameID});
                 tempArr[0].send(JSON.stringify({type: "userLeave", userID: userID}));
-            }
-            else{
-                index = games.indexOf(gameToDelete);
-                games.splice(index, 1);
+                let gameIndex = games.indexOf(tempGames[0]);
+                tempArr = tempGames[0].players.filter((x) => {return x.userID == userID});
+                let playerIndex = tempGames[0].players.indexOf(tempGames[0]);
+                games[gameIndex].players.splice(playerIndex, 1);
             }
         }
         var index = sockets.indexOf(socket);
