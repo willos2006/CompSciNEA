@@ -6,20 +6,38 @@ module.exports = function (app, path, session, db){
 
     let sockets = []
     let games = [] //this will contain a list of active games with details of users and hosts.
-    var nextQuizID = 0;
-    var nextUserID = 0;
+    var nextID = 0;
 
     function deleteSocket(socket){
-        var index = sockets.indexOf(socket);
-        sockets.splice(index, 1);
         if(socket.type == 1){
-            let gameToDelete = games.filter((x) => {return x.gameID == socket.id});
+            let gameToDelete = games.filter((x) => {return x.gameID == socket.id})[0];
+            for (var i = 0; i < gameToDelete.players.length; i++){
+                var userSocket = sockets.filter((x) => {return gameToDelete.players[i].uniqueID == x.id})[0];
+                userSocket.send(JSON.stringify({type: "hostDisconnect"}));
+            }
             index = games.indexOf(gameToDelete);
             games.splice(index, 1);
         }
         else if (socket.type == 2){
-            //code here once joing code is established
+            var userID;
+            var tempGames = games.filter((x) => {
+                let tempArr = x.players.filter((y) => {return y.uniqueID == socket.id});
+                if (tempArr.length > 0){
+                    userID = tempArr[0].userID;
+                    return true;
+                }
+            });
+            if (tempGames.length > 0){
+                let tempArr = sockets.filter((x) => {return x.id == tempGames[0].gameID});
+                tempArr[0].send(JSON.stringify({type: "userLeave", userID: userID}));
+            }
+            else{
+                index = games.indexOf(gameToDelete);
+                games.splice(index, 1);
+            }
         }
+        var index = sockets.indexOf(socket);
+        sockets.splice(index, 1);
     }
 
     socketServer.on("connection", (socket) => {
@@ -50,38 +68,38 @@ module.exports = function (app, path, session, db){
                 jsonObj = {
                     hostID: data.userID,
                     quizID: data.quizID,
-                    gameID: nextQuizID,
+                    gameID: nextID,
                     currState: 0,
                     currQuestion: 0,
                     classID: data.classID,
                     players: []
                 }
-                socket.id=nextQuizID;
-                nextQuizID++;
+                socket.id=nextID;
+                nextID++;
                 games.push(jsonObj);
             }
             else if (data.type == "pong"){
                 clientCount++;
             }
             else if (data.type == "joinGame"){
-                socket.type == 2;
+                socket.type = 2;
                 let gameID = data.gameID;
                 let userID = data.userID;
-                socket.id = nextUserID;
-                nextUserID++;
+                socket.id = nextID;
+                nextID++;
                 let username = data.username;
                 let tempArray = games.filter((x)=>{return x.gameID == gameID});
-                var index = games.indexOf(tempArray);
+                var index = games.indexOf(tempArray[0]);
                 var userJson = {
                     userID: userID,
-                    uniqueID: nextUserID - 1,
+                    uniqueID: nextID - 1,
                     username: username,
                     score: 0,
                     questionsCompleted: [] //after each question the time taken to answer and result is stored so it can be saved later on and used for analytics
                 }
-                games[index].push(userJson);
+                games[index].players.push(userJson);
                 tempArray = sockets.filter((x) => {return x.id == games[index].gameID});
-                index = sockets.indexOf(tempArray);
+                index = sockets.indexOf(tempArray[0]);
                 sockets[index].send(JSON.stringify({type: "userJoin", userID: userID, username: username}));
             }
         });
@@ -138,6 +156,15 @@ module.exports = function (app, path, session, db){
     app.get("/joinQuiz", (req, res) => {
         if(req.session.user && req.session.user.userType == 0){
             res.sendFile(path.join(__dirname, "../Frontend/quizJoin.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
+    });
+
+    app.get("/playQuiz", (req, res) => {
+        if (req.session.user && req.session.user.userType == 0){
+            res.sendFile(path.join(__dirname, "../Frontend/quizUser.html"));
         }
         else{
             res.redirect("http://localhost:4000/");

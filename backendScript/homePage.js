@@ -66,4 +66,13 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             res.json({quizName: results[0].bio});
         });
     });
+
+    app.post("/getUsername", (req, res) => {
+        var userID = req.session.user.userID;
+        db.query("SELECT username FROM userdets WHERE userID = ?", [userID], (err, results) => {
+            if (err) throw err;
+            var username = results[0].username;
+            res.json({username: username});
+        })
+    })
 }

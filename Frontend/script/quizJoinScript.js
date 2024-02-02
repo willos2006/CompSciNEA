@@ -15,6 +15,8 @@ $(document).ready(() => {
                 })
             }
             $("#quizList").append("</select>");
+            $("#quizList").append("<button class='btn btn-primary' id='goButton'>Go</button>")
+            $("#goButton").on("click", () => {window.location = `http://localhost:4000/playQuiz?gameID=${$("#selectQuiz").val()}`})
         }
         else{
             $("#quizList").append("<h3>No quizzes Available</h3>");
