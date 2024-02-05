@@ -102,6 +102,10 @@ module.exports = function (app, path, session, db){
                 index = sockets.indexOf(tempArray[0]);
                 sockets[index].send(JSON.stringify({type: "userJoin", userID: userID, username: username}));
             }
+            else if (data.type == "startGame"){
+                let quizObj = games.filter((x) => {return x.gameID == socket.id});
+                console.log(quizObj);
+            }
         });
     });
     socketServer.on("disconnect", (socket) => {

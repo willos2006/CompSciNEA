@@ -23,6 +23,10 @@ $(document).ready(() => {
     $.post("/getClassNameByID", {classID: classID}, (data) => {
         $("#className").html(data.className);
     });
+
+    $("#startGameBtn").on("click", () => {
+        ws.send(JSON.stringify({type: "startGame"}));
+    });
     
     ws = new WebSocket("ws://localhost:8080");
     ws.onopen = () => {
