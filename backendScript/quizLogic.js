@@ -66,12 +66,12 @@ module.exports = function (app, path, session, db){
             if(data.type == "init"){
                 socket.type = 1
                 jsonObj = {
-                    hostID: data.userID,
-                    quizID: data.quizID,
+                    hostID: Number(data.userID),
+                    quizID: Number(data.quizID),
                     gameID: nextID,
                     currState: 0,
                     currQuestion: 0,
-                    classID: data.classID,
+                    classID: Number(data.classID),
                     players: []
                 }
                 socket.id=nextID;
@@ -91,7 +91,7 @@ module.exports = function (app, path, session, db){
                 let tempArray = games.filter((x)=>{return x.gameID == gameID});
                 var index = games.indexOf(tempArray[0]);
                 var userJson = {
-                    userID: userID,
+                    userID: Number(userID),
                     uniqueID: nextID - 1,
                     username: username,
                     score: 0,
@@ -102,9 +102,23 @@ module.exports = function (app, path, session, db){
                 index = sockets.indexOf(tempArray[0]);
                 sockets[index].send(JSON.stringify({type: "userJoin", userID: userID, username: username}));
             }
-            else if (data.type == "startGame"){
-                let quizObj = games.filter((x) => {return x.gameID == socket.id});
-                console.log(quizObj);
+            else if (data.type == "nextQuestion"){
+                let quizObj = games.filter((x) => {return x.gameID == socket.id})[0];
+                let index = games.indexOf(quizObj);
+                db.query("SELECT questionID FROM questionmapping WHERE quizID = ?", [quizObj.quizID], (err, results) => {
+                    if (err) throw err;
+                    currQuestionID = results[quizObj.currQuestion];
+                    db.query("SELECT question FROM question WHERE questionID = ?", [currQuestionID], (err, results) => {
+                        if (err) throw err;
+                        let question = results[0].question;
+                        for (var i = 0; i < quizObj.players.length; i++){
+                            userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0];
+                            userSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question}));
+                        }
+                        hostSocket = sockets.filter((x) => {return x.id == quizObj.gameID})[0];
+                        hostSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question}));
+                    })
+                })
             }
         });
     });

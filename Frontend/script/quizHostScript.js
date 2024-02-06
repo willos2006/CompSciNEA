@@ -25,7 +25,7 @@ $(document).ready(() => {
     });
 
     $("#startGameBtn").on("click", () => {
-        ws.send(JSON.stringify({type: "startGame"}));
+        ws.send(JSON.stringify({type: "nextQuestion"}));
     });
     
     ws = new WebSocket("ws://localhost:8080");
@@ -45,5 +45,18 @@ $(document).ready(() => {
         else if (message.type == "userLeave" && state == 0){
             $(`#${message.userID}`).remove();
         }
+        else if (message.type == "previewQuestion"){
+            hideAll();
+            $("#questionPreviewText").html(message.questionNo + ") " + message.question);
+            $("#questionPreview").show();
+        }
     }
 });
+
+function hideAll(){
+    $("#startingScreen").hide();
+    $("#questionPreview").hide();
+    $("#questionScreen").hide();
+    $("#leaderboard").hide();
+    $("#endingScreen").hide();
+}
