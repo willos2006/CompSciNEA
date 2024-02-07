@@ -145,8 +145,8 @@ module.exports = function (app, path, session, db){
                         On the frontend this triggers the preview div to be disabled and the question div to be enabled.
                         This should be simple to implement, the question accepting may be more difficult.
                         */
-                    })
-                })
+                    });
+                });
             }
         });
     });
