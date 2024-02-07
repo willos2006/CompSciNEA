@@ -50,6 +50,16 @@ $(document).ready(() => {
             $("#questionPreviewText").html(message.questionNo + ") " + message.question);
             $("#questionPreview").show();
         }
+        else if (message.type == "presentQuestion"){
+            hideAll();
+            let a = message.questionObj.ansA;
+            let b = message.questionObj.ansB;
+            let c = message.questionObj.ansC;
+            let d = message.questionObj.ansD;
+            $("#questionText").html(message.questionNo + ") " + message.questionObj.question);
+            $("#a").html(a); $("#b").html(b); $("#c").html(c); $("#d").html(d);
+            $("#questionScreen").show();
+        }
     }
 });
 

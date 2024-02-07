@@ -15,6 +15,11 @@ module.exports = function (app, path, session, db){
         player: 2
     }
 
+    const gameState = {
+        idle: 0,
+        questionInProgress: 1
+    }
+
     //This function handles the deletion of a socket when a user disconnects
     function deleteSocket(socket){
         if(socket.type == socketType.host){
@@ -90,8 +95,9 @@ module.exports = function (app, path, session, db){
                     quizID: Number(data.quizID), //id of the quiz
                     gameID: nextID, //a unique id for the game. This is also the id given to the host socket.
                     //This may be confusing but it allows for one host to potentially host multiple games at once.
-                    currState: 0, 
+                    currState: gameState.idle, 
                     currQuestion: 0,
+                    currQuestionData: null,
                     classID: Number(data.classID),
                     players: []
                 }
@@ -130,9 +136,10 @@ module.exports = function (app, path, session, db){
                 db.query("SELECT questionID FROM questionmapping WHERE quizID = ?", [quizObj.quizID], (err, results) => {
                     if (err) throw err;
                     currQuestionID = results[quizObj.currQuestion]; //This finds the next question by selecting the nth item that was sent to us by the database
-                    db.query("SELECT question FROM question WHERE questionID = ?", [currQuestionID], (err, results) => { //This question is then searched for using it's ID from the previous query
+                    db.query("SELECT * FROM question WHERE questionID = ?", [currQuestionID], (err, results) => { //This question is then searched for using it's ID from the previous query
                         if (err) throw err;
                         let question = results[0].question; //question
+                        games[index].currQuestionData = results[0];
                         for (var i = 0; i < quizObj.players.length; i++){
                             userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
                             userSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question})); //Sends the questionPreview message to the client
@@ -140,11 +147,14 @@ module.exports = function (app, path, session, db){
                         //Does the same as above but for the host.
                         hostSocket = sockets.filter((x) => {return x.id == quizObj.gameID})[0];
                         hostSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question}));
-                        /* THIS IS UNFINISHED
-                        After a set interval, all users and host will be send another message telling the clients that the quiz has started accepting answers
-                        On the frontend this triggers the preview div to be disabled and the question div to be enabled.
-                        This should be simple to implement, the question accepting may be more difficult.
-                        */
+                        setTimeout(() => { //This sends the clients the presentQuestion message telling them that the user can now submit a question
+                            for (var i = 0; i < quizObj.players.length; i++){
+                                userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
+                                userSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1})); //Sends the questionPreview message to the client
+                            }
+                            games[index].currState = gameState.questionInProgress;
+                            hostSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1}));
+                        }, 3000);
                     });
                 });
             }
