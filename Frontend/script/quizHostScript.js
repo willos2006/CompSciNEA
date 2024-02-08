@@ -27,6 +27,10 @@ $(document).ready(() => {
     $("#startGameBtn").on("click", () => {
         ws.send(JSON.stringify({type: "nextQuestion"}));
     });
+
+    $("#submitBtn").on("click", () => {
+        /* submit code */
+    });
     
     ws = new WebSocket("ws://localhost:8080");
     ws.onopen = () => {
@@ -52,6 +56,7 @@ $(document).ready(() => {
         }
         else if (message.type == "presentQuestion"){
             hideAll();
+            $("#questionAnsweredText").html(`0 / ${message.totalUsers}`);
             let a = message.questionObj.ansA;
             let b = message.questionObj.ansB;
             let c = message.questionObj.ansC;
@@ -59,6 +64,9 @@ $(document).ready(() => {
             $("#questionText").html(message.questionNo + ") " + message.questionObj.question);
             $("#a").html(a); $("#b").html(b); $("#c").html(c); $("#d").html(d);
             $("#questionScreen").show();
+        }
+        else if (message.type == "answerUpdate"){
+            $("#questionAnsweredText").html(`${message.totalAnswered} / ${message.totalUsers}`);
         }
     }
 });

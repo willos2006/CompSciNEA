@@ -97,6 +97,7 @@ module.exports = function (app, path, session, db){
                     //This may be confusing but it allows for one host to potentially host multiple games at once.
                     currState: gameState.idle, 
                     currQuestion: 0,
+                    answered: 0,
                     currQuestionData: null,
                     classID: Number(data.classID),
                     players: []
@@ -132,6 +133,7 @@ module.exports = function (app, path, session, db){
             else if (data.type == "nextQuestion"){
                 let quizObj = games.filter((x) => {return x.gameID == socket.id})[0];
                 let index = games.indexOf(quizObj);
+                games[index].answered = 0;
                 //This query selects the question mappings to find the questionIDs for the selected quiz
                 db.query("SELECT questionID FROM questionmapping WHERE quizID = ?", [quizObj.quizID], (err, results) => {
                     if (err) throw err;
@@ -140,6 +142,7 @@ module.exports = function (app, path, session, db){
                         if (err) throw err;
                         let question = results[0].question; //question
                         games[index].currQuestionData = results[0];
+                        games[index].currQuestionData.startTime = new Date().getTime() / 1000;
                         for (var i = 0; i < quizObj.players.length; i++){
                             userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
                             userSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question})); //Sends the questionPreview message to the client
@@ -153,10 +156,29 @@ module.exports = function (app, path, session, db){
                                 userSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1})); //Sends the questionPreview message to the client
                             }
                             games[index].currState = gameState.questionInProgress;
-                            hostSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1}));
+                            hostSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1, totalUsers: quizObj.players.length}));
                         }, 3000);
                     });
                 });
+            }
+            else if (data.type == "submitQuestion"){
+                var playerIndex;
+                gameObj = games.filter((x) => {
+                    let playerArr = x.players.filter((y) => {y.uniqueID == socket.id});
+                    if (playerArr.length > 0){
+                        playerIndex = x.players.indexOf(playerArr[0]);
+                        return true;
+                    }
+                })[0];
+                var gameIndex = games.indexOf(gameObj);
+                let answer = data.option;
+                let timeToAnswer = (new Date().getTime() / 1000) - gameObj.currQuestionData.startTime;
+                var answerCorrect = answer == gameObj.currQuestionData.correctAns;
+                games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
+                let hostSocket = sockets.filter((x) => {x.id == gameObj.gameID})[0];
+                hostSocket.send(JSON.stringify({type: "answerUpdate", totalAnswered: gameObj.answered + 1, totalUsers: gameObj.players.length}));
+                games[gameIndex].answered += 1;
+                socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
             }
         });
     });

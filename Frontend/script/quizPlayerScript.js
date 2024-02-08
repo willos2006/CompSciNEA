@@ -44,11 +44,24 @@ $(document).ready(() => {
             $("#a").html(a); $("#b").html(b); $("#c").html(c); $("#d").html(d);
             $("#questionScreen").show();
         }
+        else if (message.type == "answerAccepted"){
+            hideAll();
+            $("#timeTakenText").html(message.timeTaken + "s");
+            $("#answerSubmit").show();
+        }
     }
+
+    $(".questionOption").on("click", function () {
+        let option = Number($(this).attr("id"));
+        ws.send(JSON.stringify({type: "submitQuestion", option: option}));
+        hideAll();
+        $("#answerSubmit").show();
+    });
 });
 
 function hideAll(){
     $("#entryText").hide();
     $("#previewQuestion").hide();
     $("#questionScreen").hide();
+    $("#answerSubmit").hide();
 }
