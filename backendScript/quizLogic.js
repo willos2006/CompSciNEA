@@ -176,8 +176,8 @@ module.exports = function (app, path, session, db){
                 var answerCorrect = answer == gameObj.currQuestionData.correctAns;
                 games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
                 let hostSocket = sockets.filter((x) => {x.id == gameObj.gameID})[0];
-                hostSocket.send(JSON.stringify({type: "answerUpdate", totalAnswered: gameObj.answered + 1, totalUsers: gameObj.players.length}));
                 games[gameIndex].answered += 1;
+                hostSocket.send(JSON.stringify({type: "answerUpdate", totalAnswered: gameObj.answered, totalUsers: gameObj.players.length}));
                 socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
             }
         });
