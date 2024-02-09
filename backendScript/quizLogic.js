@@ -137,12 +137,11 @@ module.exports = function (app, path, session, db){
                 //This query selects the question mappings to find the questionIDs for the selected quiz
                 db.query("SELECT questionID FROM questionmapping WHERE quizID = ?", [quizObj.quizID], (err, results) => {
                     if (err) throw err;
-                    currQuestionID = results[quizObj.currQuestion]; //This finds the next question by selecting the nth item that was sent to us by the database
+                    currQuestionID = results[quizObj.currQuestion].questionID; //This finds the next question by selecting the nth item that was sent to us by the database
                     db.query("SELECT * FROM question WHERE questionID = ?", [currQuestionID], (err, results) => { //This question is then searched for using it's ID from the previous query
                         if (err) throw err;
                         let question = results[0].question; //question
                         games[index].currQuestionData = results[0];
-                        games[index].currQuestionData.startTime = new Date().getTime() / 1000;
                         for (var i = 0; i < quizObj.players.length; i++){
                             userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
                             userSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question})); //Sends the questionPreview message to the client
@@ -151,6 +150,7 @@ module.exports = function (app, path, session, db){
                         hostSocket = sockets.filter((x) => {return x.id == quizObj.gameID})[0];
                         hostSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question}));
                         setTimeout(() => { //This sends the clients the presentQuestion message telling them that the user can now submit a question
+                            games[index].currQuestionData.startTime = new Date().getTime() / 1000;
                             for (var i = 0; i < quizObj.players.length; i++){
                                 userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
                                 userSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1})); //Sends the questionPreview message to the client
@@ -164,7 +164,7 @@ module.exports = function (app, path, session, db){
             else if (data.type == "submitQuestion"){
                 var playerIndex;
                 gameObj = games.filter((x) => {
-                    let playerArr = x.players.filter((y) => {y.uniqueID == socket.id});
+                    let playerArr = x.players.filter((y) => {return y.uniqueID == socket.id});
                     if (playerArr.length > 0){
                         playerIndex = x.players.indexOf(playerArr[0]);
                         return true;
@@ -174,11 +174,47 @@ module.exports = function (app, path, session, db){
                 let answer = data.option;
                 let timeToAnswer = (new Date().getTime() / 1000) - gameObj.currQuestionData.startTime;
                 var answerCorrect = answer == gameObj.currQuestionData.correctAns;
+                if (answerCorrect){
+                    let score = 10000 * (2.64 ** (-timeToAnswer*0.3));
+                    games[gameIndex].players[playerIndex].score += score;
+                }
                 games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
-                let hostSocket = sockets.filter((x) => {x.id == gameObj.gameID})[0];
+                let hostSocket = sockets.filter((x) => {return x.id == gameObj.gameID})[0];
                 games[gameIndex].answered += 1;
                 hostSocket.send(JSON.stringify({type: "answerUpdate", totalAnswered: gameObj.answered, totalUsers: gameObj.players.length}));
                 socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
+            }
+            else if (data.type == "finishQuestion"){
+                var gameObj = games.filter((x) => {return x.gameID == socket.id})[0];
+                var index = games.indexOf(gameObj);
+                var totalUsers = gameObj.players.length;
+                var questionData = gameObj.currQuestionData;
+                let questionMapping = {
+                    0: "ansA",
+                    1: "ansB",
+                    2: "ansC",
+                    3: "ansD"
+                }
+                var correctAnswerIndex = questionMapping[questionData.correctAns];
+                var correctAnswer = questionData[correctAnswerIndex];
+                var totalCorrect = 0;
+                for (var i = 0; i < totalUsers; i++){
+                    let userObj = gameObj.players[i];
+                    var result;
+                    if (userObj.questionsCompleted.length == gameObj.currQuestion || userObj.questionsCompleted[gameObj.currQuestion].result == false){
+                        result = false
+                    }
+                    else{
+                        result = true;
+                        totalCorrect += 1
+                    }
+                    var userSocket = sockets.filter((x) => {return x.id == userObj.uniqueID})[0];
+                    userSocket.send(JSON.stringify({type: "resultData", result: result}));
+                }
+                var hostSocket = sockets.filter((x) => {return x.id == gameObj.gameID})[0];
+                hostSocket.send(JSON.stringify({type: "resultData", totalCorrect: totalCorrect, totalUsers: totalUsers, userList: gameObj.players, correctAnswer: correctAnswer}));
+                games[index].currState = gameState.idle;
+                games[index].currQuestion += 1;
             }
         });
     });

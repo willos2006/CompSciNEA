@@ -62,19 +62,35 @@ $(document).ready(() => {
             let c = message.questionObj.ansC;
             let d = message.questionObj.ansD;
             $("#questionText").html(message.questionNo + ") " + message.questionObj.question);
-            $("#a").html(a); $("#b").html(b); $("#c").html(c); $("#d").html(d);
+            $("#0").html(a); $("#1").html(b); $("#2").html(c); $("#3").html(d);
             $("#questionScreen").show();
         }
         else if (message.type == "answerUpdate"){
             $("#questionAnsweredText").html(`${message.totalAnswered} / ${message.totalUsers}`);
         }
+        else if (message.type == "resultData"){
+            hideAll();
+            $("#correctAns").html(message.correctAnswer);
+            $("#totalCorrectText").html(`${message.totalCorrect}/${message.totalUsers}`);
+            for (var i = 0; i < message.totalUsers && i < 5; i++){
+                $(`#player${i}`).html(message.userList[i].username + " - " + message.userList[i].score + " points");
+            }
+            $("#leaderBoard").show();
+        }
     }
+
+    $("#submitBtn").on("click", () => {
+        ws.send(JSON.stringify({type: "finishQuestion"}));
+    });
+    $("#nextQBtn").on("click", () => {
+        ws.send(JSON.stringify({type: "nextQuestion"}));
+    });
 });
 
 function hideAll(){
     $("#startingScreen").hide();
     $("#questionPreview").hide();
     $("#questionScreen").hide();
-    $("#leaderboard").hide();
+    $("#leaderBoard").hide();
     $("#endingScreen").hide();
 }

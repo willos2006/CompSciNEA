@@ -41,7 +41,7 @@ $(document).ready(() => {
             let c = message.questionObj.ansC;
             let d = message.questionObj.ansD;
             $("#questionText").html(message.questionNo + ") " + message.questionObj.question);
-            $("#a").html(a); $("#b").html(b); $("#c").html(c); $("#d").html(d);
+            $("#0").html(a); $("#1").html(b); $("#2").html(c); $("#3").html(d);
             $("#questionScreen").show();
         }
         else if (message.type == "answerAccepted"){
@@ -49,9 +49,19 @@ $(document).ready(() => {
             $("#timeTakenText").html(message.timeTaken + "s");
             $("#answerSubmit").show();
         }
+        else if (message.type == "resultData"){
+            hideAll();
+            if (message.result){
+                $("#questionResText").html("correct!");
+            }
+            else{
+                $("#questionResText").html("incorrect");
+            }
+            $("#answerEndScreen").show()
+        }
     }
 
-    $(".questionOption").on("click", function () {
+    $(".questionOption").on("click", function () { //using function notation here rather than () => {} so i can access the element clicked with 'this'
         let option = Number($(this).attr("id"));
         ws.send(JSON.stringify({type: "submitQuestion", option: option}));
         hideAll();
@@ -64,4 +74,5 @@ function hideAll(){
     $("#previewQuestion").hide();
     $("#questionScreen").hide();
     $("#answerSubmit").hide();
+    $("#answerEndScreen").hide()
 }
