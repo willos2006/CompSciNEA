@@ -59,6 +59,9 @@ $(document).ready(() => {
             }
             $("#answerEndScreen").show()
         }
+        else if (message.type == "gameOver"){
+            hideAll();
+        }
     }
 
     $(".questionOption").on("click", function () { //using function notation here rather than () => {} so i can access the element clicked with 'this'

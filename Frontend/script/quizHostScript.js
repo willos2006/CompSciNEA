@@ -77,6 +77,9 @@ $(document).ready(() => {
             }
             $("#leaderBoard").show();
         }
+        else if (message.type == "gameOver"){
+            hideAll();
+        }
     }
 
     $("#submitBtn").on("click", () => {

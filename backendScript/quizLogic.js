@@ -137,28 +137,41 @@ module.exports = function (app, path, session, db){
                 //This query selects the question mappings to find the questionIDs for the selected quiz
                 db.query("SELECT questionID FROM questionmapping WHERE quizID = ?", [quizObj.quizID], (err, results) => {
                     if (err) throw err;
-                    currQuestionID = results[quizObj.currQuestion].questionID; //This finds the next question by selecting the nth item that was sent to us by the database
-                    db.query("SELECT * FROM question WHERE questionID = ?", [currQuestionID], (err, results) => { //This question is then searched for using it's ID from the previous query
-                        if (err) throw err;
-                        let question = results[0].question; //question
-                        games[index].currQuestionData = results[0];
-                        for (var i = 0; i < quizObj.players.length; i++){
-                            userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
-                            userSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question})); //Sends the questionPreview message to the client
-                        }
-                        //Does the same as above but for the host.
-                        hostSocket = sockets.filter((x) => {return x.id == quizObj.gameID})[0];
-                        hostSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question}));
-                        setTimeout(() => { //This sends the clients the presentQuestion message telling them that the user can now submit a question
-                            games[index].currQuestionData.startTime = new Date().getTime() / 1000;
+                    if (results.length >= quizObj.currQuestion + 1){
+                        currQuestionID = results[quizObj.currQuestion].questionID; //This finds the next question by selecting the nth item that was sent to us by the database
+                        db.query("SELECT * FROM question WHERE questionID = ?", [currQuestionID], (err, results) => { //This question is then searched for using it's ID from the previous query
+                            if (err) throw err;
+                            let question = results[0].question; //question
+                            games[index].currQuestionData = results[0];
                             for (var i = 0; i < quizObj.players.length; i++){
                                 userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
-                                userSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1})); //Sends the questionPreview message to the client
+                                userSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question})); //Sends the questionPreview message to the client
                             }
-                            games[index].currState = gameState.questionInProgress;
-                            hostSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1, totalUsers: quizObj.players.length}));
-                        }, 3000);
-                    });
+                            //Does the same as above but for the host.
+                            hostSocket = sockets.filter((x) => {return x.id == quizObj.gameID})[0];
+                            hostSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question}));
+                            setTimeout(() => { //This sends the clients the presentQuestion message telling them that the user can now submit a question
+                                games[index].currQuestionData.startTime = new Date().getTime() / 1000;
+                                for (var i = 0; i < quizObj.players.length; i++){
+                                    userSocket = sockets.filter((x) => {return x.id == quizObj.players[i].uniqueID})[0]; //Finds the user socket
+                                    userSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1})); //Sends the questionPreview message to the client
+                                }
+                                games[index].currState = gameState.questionInProgress;
+                                hostSocket.send(JSON.stringify({type: "presentQuestion", questionObj: games[index].currQuestionData, questionNo: quizObj.currQuestion + 1, totalUsers: quizObj.players.length}));
+                            }, 3000);
+                        });
+                    }
+                    else{
+                        let players = games[index].players;
+                        players.sort((a,b) => b.score - a.score);
+                        for (var i = 0; i < players.length; i++){
+                            let userSocket = sockets.filter((x) => {return x.id == players[i].uniqueID})[0];
+                            userSocket.send(JSON.stringify({type: "gameOver", position: i + 1}));
+                            //Here you also need to set up storing the user data and analytics based on their performance
+                        }
+                        let hostSocket = sockets.filter((x) => {return x.id == games[index].gameID})[0];
+                        hostSocket.send(JSON.stringify({type: "gameOver", players: players}));
+                    }
                 });
             }
             else if (data.type == "submitQuestion"){
