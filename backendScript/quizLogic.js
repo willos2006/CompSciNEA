@@ -163,7 +163,7 @@ module.exports = function (app, path, session, db){
                     }
                     else{
                         let players = games[index].players;
-                        //players.sort((a,b) => b.score - a.score);
+                        players.sort((a,b) => b.score - a.score);
                         for (var i = 0; i < players.length; i++){
                             let userSocket = sockets.filter((x) => {return x.id == players[i].uniqueID})[0];
                             userSocket.send(JSON.stringify({type: "gameOver", position: i + 1}));
