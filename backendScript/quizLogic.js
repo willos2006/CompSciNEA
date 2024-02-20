@@ -163,11 +163,33 @@ module.exports = function (app, path, session, db){
                     }
                     else{
                         let players = games[index].players;
-                        players.sort((a,b) => b.score - a.score);
+                        //players.sort((a,b) => b.score - a.score);
                         for (var i = 0; i < players.length; i++){
                             let userSocket = sockets.filter((x) => {return x.id == players[i].uniqueID})[0];
                             userSocket.send(JSON.stringify({type: "gameOver", position: i + 1}));
+                            let currPlayer = players[i];
                             //Here you also need to set up storing the user data and analytics based on their performance
+                            //could store  in 'analytics' table with columns: userID, questionID, avgTime, timesAnswered, lastAnswered 
+                            //data stored about each question: {questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer}
+                            db.query("SELECT * FROM analytics WHERE userID = ?", [currPlayer.userID], (err, results) => {
+                                if (err) throw err;
+                                questionIDs = [];
+                                results.map((x) => {questionIDs.push(x.questionID)});
+                                for (var question = 0; question < currPlayer.questionsCompleted.length; question++){
+                                    let currQuestionObj = currPlayer.questionsCompleted[question];
+                                    if (questionIDs.includes(currQuestionObj.questionID)){
+                                        let analyticsObj = results.filter((x) => {return x.questionID == currQuestionObj.questionID})[0];
+                                        let total = analyticsObj.avgTime * analyticsObj.timesAnswered;
+                                        total += currQuestionObj.timeToAnswer;
+                                        let timesAnswered = analyticsObj.timesAnswered + 1
+                                        let avgTime = total / timesAnswered;
+                                        db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = CURRENT_DATE()", [avgTime, timesAnswered], (err, results) => {if (err) throw err;});
+                                    }
+                                    else{
+                                        db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, CURRENT_DATE())",[currPlayer.userID, currQuestionObj.questionID, currQuestionObj.timeToAnswer], (err, results) => {if (err) throw err;});
+                                    }
+                                }
+                            })
                         }
                         let hostSocket = sockets.filter((x) => {return x.id == games[index].gameID})[0];
                         hostSocket.send(JSON.stringify({type: "gameOver", players: players}));
