@@ -61,6 +61,8 @@ $(document).ready(() => {
         }
         else if (message.type == "gameOver"){
             hideAll();
+            $("#positionText").html(message.position);
+            $("#endScreen").show();
         }
     }
 
@@ -77,5 +79,6 @@ function hideAll(){
     $("#previewQuestion").hide();
     $("#questionScreen").hide();
     $("#answerSubmit").hide();
-    $("#answerEndScreen").hide()
+    $("#answerEndScreen").hide();
+    $("#endScreen").hide();
 }
