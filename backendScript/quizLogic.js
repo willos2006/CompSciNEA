@@ -168,9 +168,6 @@ module.exports = function (app, path, session, db){
                             let userSocket = sockets.filter((x) => {return x.id == players[i].uniqueID})[0];
                             userSocket.send(JSON.stringify({type: "gameOver", position: i + 1}));
                             let currPlayer = players[i];
-                            //Here you also need to set up storing the user data and analytics based on their performance
-                            //could store  in 'analytics' table with columns: userID, questionID, avgTime, timesAnswered, lastAnswered 
-                            //data stored about each question: {questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer}
                             db.query("SELECT * FROM analytics WHERE userID = ?", [currPlayer.userID], (err, results) => {
                                 if (err) throw err;
                                 questionIDs = [];
@@ -196,6 +193,7 @@ module.exports = function (app, path, session, db){
                     }
                 });
             }
+            //Need to focus on commenting this part of the code.
             else if (data.type == "submitQuestion"){
                 var playerIndex;
                 gameObj = games.filter((x) => {
