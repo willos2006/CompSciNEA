@@ -79,6 +79,7 @@ $(document).ready(() => {
         }
         else if (message.type == "gameOver"){
             hideAll();
+            $("#endingScreen").show();
         }
     }
 

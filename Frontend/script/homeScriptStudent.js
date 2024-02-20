@@ -4,5 +4,8 @@ $(document).ready(() => {
     });
     $("#quizOption").on("click", () => {
         window.location = "http://localhost:4000/joinQuiz";
+    });
+    $("#revisionOption").on("click", () => {
+        window.location = "http://localhost:4000/personalisedQuiz";
     })
 })

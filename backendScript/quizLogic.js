@@ -321,5 +321,72 @@ module.exports = function (app, path, session, db){
         else{
             res.redirect("http://localhost:4000/");
         }
+    });
+
+    /*
+    Planning the personalised quiz:
+    Get a list of all questions the user has completed, and a list of all questions that the user has not.
+    By using a scoring system based on the time the question was last asked, and how long it took to answer, 
+    the probabilites of each question can be picked. I.e. assign each question that could be asked a number.
+    In a list, add duplicated of this number based on its probability to be picked. This way you can randomly
+    select a question to give. The Questions should be passed to the client in order, so the client just needs
+    to keep track on user performance. These can be posted back to the server to update the database.
+    */
+
+    app.post("/getPersonalisedQuiz", (req, res) => {
+        var userID = req.session.user.userID;
+        var numberOfQuestions = req.body.noOfQuestions;
+        db.query("SELECT * FROM analytics WHERE userID = ?", [userID], (err, results) => {
+            if (err) throw err;
+            var answeredList = results;
+            db.query("SELECT * FROM questions", (err, results) => {
+                if (err) throw err;
+                var allQuestions = results;
+                var questionsLeft = results.filter((x) => {
+                    let answeredIDs = [];
+                    answeredList.map((y) => {answeredIDs.push(x.questionIDd)});
+                    return !(answeredIDs.includes(x.questionID));
+                });
+                answeredList.sort((a,b) => b.avgTime - a.avgTime); //sorts the list by time taken to answer
+                for (var i = 0; i < answeredList.length; i++){
+                    var timePrecedence = 2.4**-i * 100;
+                    var dateAnswered = sqlDateToJS(answeredList[i].lastAnswered);
+                    var timeDifference = (dateAnswered - timeDifference);
+                    var totalPrecedence = (timeDifference * 0.5) + timePrecedence;
+                    answeredList[i].precedence = totalPrecedence;
+                    var questionObj = allQuestions.filter((x) => {return x.questionID == answeredList[i].questionID})[0];
+                    for (var x = 0; x < totalPrecedence / 1000; i++){
+                        allQuestions.push(questionObj);
+                    }
+                }
+                var questionList = [];
+                for (var i = 0; i < numberOfQuestions; i++){
+                    let randomNumber = Math.floor(Math.random() * (allQuestions.length));
+                    questionList.push(allQuestions[randomNumber]);
+                }
+                res.json({questions: questionList});
+            });
+        })
+    });
+
+    app.get("/personalisedQuiz", (req, res) =>{
+        if (req.session.user && req.session.user.userType == 0){
+            res.sendFile(path.join(__dirname, "../Frontend/personalisedQuiz.html"));
+        }
     })
+}
+
+function sqlDateToJS(sqlDate){
+    //example sql date: 2024-02-20 00:00:00
+    var splitDateTime = sqlDate.split(" ");
+    var splitYearDayMonth = splitDateTime[0].split("-");
+    var year = splitYearDayMonth[0];
+    var day = splitYearDayMonth[1];
+    var month = splitYearDayMonth[2];
+    var splitHourMinSec = splitDateTime[1].split(":");
+    var hour = splitHourMinSec[0];
+    var min = splitHourMinSec[1];
+    var sec = splitHourMinSec[2];
+    date = new Date(year, month, day, hour, min, sec);
+    return date;
 }
