@@ -4,9 +4,15 @@ $(document).ready(() => {
             alert("Enter a value of one or more");
         }
         else{
-            $.post("/getPersonalisedQuiz", {noOfQuestions: $("#noOfQuestions").val()}, (data) => {
-                //logic
-            });
+            setInterval(() => {
+                $.post("/getQuestion", (data) => {
+                    console.log(data);
+                    let randomNumber = Math.floor(Math.random() * (5));
+                    $.post("/submitQuestionAnswer", {questionID: data.question.questionID, timeToAnswer: randomNumber}, (data) => {
+                        console.log(data);
+                    })
+                })
+            }, 1500)
         }
     })
 });

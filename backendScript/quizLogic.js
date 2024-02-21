@@ -180,10 +180,10 @@ module.exports = function (app, path, session, db){
                                         total += currQuestionObj.timeToAnswer;
                                         let timesAnswered = analyticsObj.timesAnswered + 1
                                         let avgTime = total / timesAnswered;
-                                        db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = CURRENT_DATE()", [avgTime, timesAnswered], (err, results) => {if (err) throw err;});
+                                        db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [avgTime, timesAnswered, currPlayer.userID, currQuestionObj.questionID], (err, results) => {if (err) throw err;});
                                     }
                                     else{
-                                        db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, CURRENT_DATE())",[currPlayer.userID, currQuestionObj.questionID, currQuestionObj.timeToAnswer], (err, results) => {if (err) throw err;});
+                                        db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())",[currPlayer.userID, currQuestionObj.questionID, currQuestionObj.timeToAnswer], (err, results) => {if (err) throw err;});
                                     }
                                 }
                             })
@@ -333,13 +333,12 @@ module.exports = function (app, path, session, db){
     to keep track on user performance. These can be posted back to the server to update the database.
     */
 
-    app.post("/getPersonalisedQuiz", (req, res) => {
+    app.post("/getQuestion", (req, res) => {
         var userID = req.session.user.userID;
-        var numberOfQuestions = req.body.noOfQuestions;
         db.query("SELECT * FROM analytics WHERE userID = ?", [userID], (err, results) => {
             if (err) throw err;
             var answeredList = results;
-            db.query("SELECT * FROM questions", (err, results) => {
+            db.query("SELECT * FROM question", (err, results) => {
                 if (err) throw err;
                 var allQuestions = results;
                 var questionsLeft = results.filter((x) => {
@@ -359,15 +358,32 @@ module.exports = function (app, path, session, db){
                         allQuestions.push(questionObj);
                     }
                 }
-                var questionList = [];
-                for (var i = 0; i < numberOfQuestions; i++){
-                    let randomNumber = Math.floor(Math.random() * (allQuestions.length));
-                    questionList.push(allQuestions[randomNumber]);
-                }
-                res.json({questions: questionList});
+                let randomNumber = Math.floor(Math.random() * (allQuestions.length));
+                var question = allQuestions[randomNumber];
+                res.json({question: question});
             });
         })
     });
+
+    app.post("/submitQuestionAnswer", (req, res) => {
+        var questionID = req.body.questionID;
+        var timeToAnswer = req.body.timeToAnswer;
+        var userID = req.session.user.userID;
+        db.query("SELECT * FROM analytics WHERE userID = ? AND questionID = ?", [userID, questionID],(err, results) => {
+            if (err) throw err;
+            if (results.length > 0){
+                let currAvg = results[0].avgTime;
+                let currTotal = results[0].timesAnswered;
+                let cumulativeTotal = currTotal * currAvg + timeToAnswer;
+                let newAvg = cumulativeTotal / (currTotal + 1);
+                db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [newAvg, currTotal + 1, userID, questionID], (err, results) => {if (err) throw err;});
+            }
+            else{
+                db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())", [userID, questionID, timeToAnswer], (err, results) => {if (err) throw err;});
+            }
+            res.json({res: true})
+        })
+    })
 
     app.get("/personalisedQuiz", (req, res) =>{
         if (req.session.user && req.session.user.userType == 0){
@@ -377,6 +393,7 @@ module.exports = function (app, path, session, db){
 }
 
 function sqlDateToJS(sqlDate){
+    sqlDate = sqlDate.toString();
     //example sql date: 2024-02-20 00:00:00
     var splitDateTime = sqlDate.split(" ");
     var splitYearDayMonth = splitDateTime[0].split("-");
