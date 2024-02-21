@@ -323,16 +323,6 @@ module.exports = function (app, path, session, db){
         }
     });
 
-    /*
-    Planning the personalised quiz:
-    Get a list of all questions the user has completed, and a list of all questions that the user has not.
-    By using a scoring system based on the time the question was last asked, and how long it took to answer, 
-    the probabilites of each question can be picked. I.e. assign each question that could be asked a number.
-    In a list, add duplicated of this number based on its probability to be picked. This way you can randomly
-    select a question to give. The Questions should be passed to the client in order, so the client just needs
-    to keep track on user performance. These can be posted back to the server to update the database.
-    */
-
     app.post("/getQuestion", (req, res) => {
         var userID = req.session.user.userID;
         db.query("SELECT * FROM analytics WHERE userID = ?", [userID], (err, results) => {
