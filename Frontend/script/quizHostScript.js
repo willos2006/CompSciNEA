@@ -27,10 +27,6 @@ $(document).ready(() => {
     $("#startGameBtn").on("click", () => {
         ws.send(JSON.stringify({type: "nextQuestion"}));
     });
-
-    $("#submitBtn").on("click", () => {
-        /* submit code */
-    });
     
     ws = new WebSocket("ws://localhost:8080");
     ws.onopen = () => {
