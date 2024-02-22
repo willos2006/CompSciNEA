@@ -5,14 +5,15 @@ $(document).ready(() => {
     $(".qOption").on("click", function (){
         let option = Number($(this).attr("id"));
         let timeTaken = (new Date().getTime() / 1000) - startTime;
+        $("#timeText").html(timeTaken);
         if (option == currentQuestion.correctAns){
-            submitAnswer(currentQuestion.questionID, timeTaken);
             $("#resultText").html("correct!");
         }
         else{
+            timeTaken = timeTaken * 100;
             $("#resultText").html("incorrect");
         }
-        $("#timeText").html(timeTaken);
+        submitAnswer(currentQuestion.questionID, timeTaken);
         hideAll();
         $("#resultScreen").show();
     });

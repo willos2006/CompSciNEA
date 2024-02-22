@@ -207,10 +207,9 @@ module.exports = function (app, path, session, db){
                 let answer = data.option;
                 let timeToAnswer = (new Date().getTime() / 1000) - gameObj.currQuestionData.startTime;
                 var answerCorrect = answer == gameObj.currQuestionData.correctAns;
-                if (answerCorrect){
-                    let score = 10000 * (2.64 ** (-timeToAnswer*0.3));
-                    games[gameIndex].players[playerIndex].score += score;
-                }
+                let score = 10000 * (2.64 ** (-timeToAnswer*0.3));
+                if(answerCorrect) timeToAnswer = timeToAnswer * 100;
+                games[gameIndex].players[playerIndex].score += score;
                 games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
                 let hostSocket = sockets.filter((x) => {return x.id == gameObj.gameID})[0];
                 games[gameIndex].answered += 1;
