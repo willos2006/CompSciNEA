@@ -363,7 +363,7 @@ module.exports = function (app, path, session, db){
             if (results.length > 0){
                 let currAvg = results[0].avgTime;
                 let currTotal = results[0].timesAnswered;
-                let cumulativeTotal = currTotal * currAvg + timeToAnswer;
+                let cumulativeTotal = (currTotal * currAvg) + timeToAnswer;
                 let newAvg = cumulativeTotal / (currTotal + 1);
                 db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [newAvg, currTotal + 1, userID, questionID], (err, results) => {if (err) throw err;});
             }

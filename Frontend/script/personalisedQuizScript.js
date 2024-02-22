@@ -5,6 +5,7 @@ $(document).ready(() => {
     $(".qOption").on("click", function (){
         let option = Number($(this).attr("id"));
         let timeTaken = (new Date().getTime() / 1000) - startTime;
+        alert(timeTaken);
         $("#timeText").html(timeTaken);
         if (option == currentQuestion.correctAns){
             $("#resultText").html("correct!");
