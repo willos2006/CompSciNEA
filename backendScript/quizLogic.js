@@ -350,7 +350,7 @@ module.exports = function (app, path, session, db){
                 }
                 let randomNumber = Math.floor(Math.random() * (allQuestions.length));
                 var question = allQuestions[randomNumber];
-                res.json({question: question});
+                res.json({questionData: question});
             });
         })
     });
