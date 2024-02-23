@@ -358,20 +358,8 @@ module.exports = function (app, path, session, db){
         var questionID = req.body.questionID;
         var timeToAnswer = req.body.timeToAnswer;
         var userID = req.session.user.userID;
-        db.query("SELECT * FROM analytics WHERE userID = ? AND questionID = ?", [userID, questionID],(err, results) => {
-            if (err) throw err;
-            if (results.length > 0){
-                let currAvg = results[0].avgTime;
-                let currTotal = results[0].timesAnswered;
-                let cumulativeTotal = Number(currTotal * currAvg) + Number(timeToAnswer);
-                let newAvg = cumulativeTotal / (currTotal + 1);
-                db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [newAvg, currTotal + 1, userID, questionID], (err, results) => {if (err) throw err;});
-            }
-            else{
-                db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())", [userID, questionID, timeToAnswer], (err, results) => {if (err) throw err;});
-            }
-            res.json({res: true})
-        })
+        saveAnswer(userID, questionID, timeToAnswer);
+        res.json({res: true});
     })
 
     app.get("/personalisedQuiz", (req, res) =>{
@@ -379,6 +367,22 @@ module.exports = function (app, path, session, db){
             res.sendFile(path.join(__dirname, "../Frontend/personalisedQuiz.html"));
         }
     })
+}
+
+function saveAnswer(db, userID, questionID, timeToAnswer){
+    db.query("SELECT * FROM analytics WHERE userID = ? AND questionID = ?", [userID, questionID],(err, results) => {
+        if (err) throw err;
+        if (results.length > 0){
+            let currAvg = results[0].avgTime;
+            let currTotal = results[0].timesAnswered;
+            let cumulativeTotal = Number(currTotal * currAvg) + Number(timeToAnswer);
+            let newAvg = cumulativeTotal / (currTotal + 1);
+            db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [newAvg, currTotal + 1, userID, questionID], (err, results) => {if (err) throw err;});
+        }
+        else{
+            db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())", [userID, questionID, timeToAnswer], (err, results) => {if (err) throw err;});
+        }
+    });
 }
 
 function sqlDateToJS(sqlDate){
