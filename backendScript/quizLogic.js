@@ -208,7 +208,7 @@ module.exports = function (app, path, session, db){
                 let timeToAnswer = (new Date().getTime() / 1000) - gameObj.currQuestionData.startTime;
                 var answerCorrect = answer == gameObj.currQuestionData.correctAns;
                 let score = 10000 * (2.64 ** (-timeToAnswer*0.3));
-                if(answerCorrect) timeToAnswer = timeToAnswer * 100;
+                if(!answerCorrect) timeToAnswer = timeToAnswer * 100;
                 games[gameIndex].players[playerIndex].score += score;
                 games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
                 let hostSocket = sockets.filter((x) => {return x.id == gameObj.gameID})[0];
@@ -337,13 +337,15 @@ module.exports = function (app, path, session, db){
                 });
                 answeredList.sort((a,b) => b.avgTime - a.avgTime); //sorts the list by time taken to answer
                 for (var i = 0; i < answeredList.length; i++){
-                    var timePrecedence = 2.4**-i * 100;
-                    var dateAnswered = sqlDateToJS(answeredList[i].lastAnswered);
-                    var timeDifference = (dateAnswered - timeDifference);
+                    var timePrecedence = 2.4**-i * 100 * answeredList[i].avgTime;
+                    var dateAnswered = answeredList[i].lastAnswered;
+                    var timeDifference = (new Date() - dateAnswered);
                     var totalPrecedence = (timeDifference * 0.5) + timePrecedence;
                     answeredList[i].precedence = totalPrecedence;
                     var questionObj = allQuestions.filter((x) => {return x.questionID == answeredList[i].questionID})[0];
-                    for (var x = 0; x < totalPrecedence / 1000; i++){
+                    console.log(totalPrecedence)
+                    //I dont know how this is as quick as it is but i should look into a different way of handling this
+                    for (var x = 0; x < totalPrecedence; x++){
                         allQuestions.push(questionObj);
                     }
                 }
@@ -358,7 +360,8 @@ module.exports = function (app, path, session, db){
         var questionID = req.body.questionID;
         var timeToAnswer = req.body.timeToAnswer;
         var userID = req.session.user.userID;
-        saveAnswer(userID, questionID, timeToAnswer);
+        var result = req.body.result;
+        saveAnswer(db, userID, questionID, timeToAnswer, result);
         res.json({res: true});
     })
 
@@ -369,34 +372,24 @@ module.exports = function (app, path, session, db){
     })
 }
 
-function saveAnswer(db, userID, questionID, timeToAnswer){
+function saveAnswer(db, userID, questionID, timeToAnswer, result){
     db.query("SELECT * FROM analytics WHERE userID = ? AND questionID = ?", [userID, questionID],(err, results) => {
         if (err) throw err;
         if (results.length > 0){
-            let currAvg = results[0].avgTime;
-            let currTotal = results[0].timesAnswered;
-            let cumulativeTotal = Number(currTotal * currAvg) + Number(timeToAnswer);
-            let newAvg = cumulativeTotal / (currTotal + 1);
+            var newAvg;
+            var currTotal = results[0].timesAnswered;
+            if (result) {
+                let currAvg = results[0].avgTime;
+                let cumulativeTotal = Number(currTotal * currAvg) + Number(timeToAnswer);
+                newAvg = cumulativeTotal / (currTotal + 1);
+            }
+            else{
+                newAvg = timeToAnswer;
+            }
             db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [newAvg, currTotal + 1, userID, questionID], (err, results) => {if (err) throw err;});
         }
         else{
             db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())", [userID, questionID, timeToAnswer], (err, results) => {if (err) throw err;});
         }
     });
-}
-
-function sqlDateToJS(sqlDate){
-    sqlDate = sqlDate.toString();
-    //example sql date: 2024-02-20 00:00:00
-    var splitDateTime = sqlDate.split(" ");
-    var splitYearDayMonth = splitDateTime[0].split("-");
-    var year = splitYearDayMonth[0];
-    var day = splitYearDayMonth[1];
-    var month = splitYearDayMonth[2];
-    var splitHourMinSec = splitDateTime[1].split(":");
-    var hour = splitHourMinSec[0];
-    var min = splitHourMinSec[1];
-    var sec = splitHourMinSec[2];
-    date = new Date(year, month, day, hour, min, sec);
-    return date;
 }

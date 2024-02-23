@@ -13,7 +13,7 @@ $(document).ready(() => {
             timeTaken = timeTaken * 100;
             $("#resultText").html("incorrect");
         }
-        submitAnswer(currentQuestion.questionID, timeTaken);
+        submitAnswer(currentQuestion.questionID, timeTaken, (option == currentQuestion.correctAns));
         hideAll();
         $("#resultScreen").show();
     });
@@ -47,9 +47,9 @@ function getQuestion(){
     return questionData.questionData;
 }
 
-function submitAnswer(questionID, timeToAnswer){
+function submitAnswer(questionID, timeToAnswer, result){
     $.ajaxSetup({async: false});
-    $.post("/submitQuestionAnswer", {questionID: questionID, timeToAnswer: timeToAnswer}, (data) => {
+    $.post("/submitQuestionAnswer", {questionID: questionID, timeToAnswer: timeToAnswer, result: result}, (data) => {
         if(!data.res){
             alert("error");
         }
