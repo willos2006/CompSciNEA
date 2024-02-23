@@ -144,7 +144,7 @@ module.exports = function (app, path, session, db){
                 let quizObj = getQuizObj(games, socket.id);
                 let index = games.indexOf(quizObj);
                 games[index].answered = 0;
-                //This query selects the question mappings to find the questionIDs for the selected quiz
+                //This query selects the questions for the selected quiz
                 db.query("SELECT * FROM questionmapping, question WHERE questionmapping.quizID = ? AND questionmapping.questionID = question.questionID", [quizObj.quizID], (err, results) => {
                     if (err) throw err;
                     if (results.length >= quizObj.currQuestion + 1){
@@ -394,9 +394,16 @@ function saveAnswer(db, userID, questionID, timeToAnswer, result){
             var newAvg;
             var currTotal = results[0].timesAnswered;
             if (result) {
+                //This calculates the average time. To make it more realistic, it will only use a total of 10 scores to calculate the average to make it eaasier to reduce the average
                 let currAvg = results[0].avgTime;
-                let cumulativeTotal = Number(currTotal * currAvg) + Number(timeToAnswer);
-                newAvg = cumulativeTotal / (currTotal + 1);
+                if (currTotal > 10){
+                    let cumulativeTotal = Number(currTotal * currAvg) + Number(timeToAnswer);
+                    newAvg = cumulativeTotal / (currTotal + 1);
+                }
+                else{
+                    let cumulativeTotal = Number(currTotal * 5) + Number(timeToAnswer);
+                    newAvg = cumulativeTotal / 11
+                }
             }
             else{
                 newAvg = timeToAnswer;
