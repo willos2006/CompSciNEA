@@ -109,6 +109,12 @@ module.exports = function (app, path, session, db){
             else if (data.type == "pong"){ //part of the ping/pong keep alive system
                 clientCount++;
             }
+            /* 
+            getting values from the socket i.e. userID, socketID, gameID
+            selects the game obj by filtering through the games array until an object with the correct gameID is found
+            creating a user object to append to the game obj
+            Sends a message to the host with details of the user that has joined.
+            */
             else if (data.type == "joinGame"){
                 socket.type = socketType.player;
                 let gameID = data.gameID;
@@ -116,8 +122,8 @@ module.exports = function (app, path, session, db){
                 socket.id = nextID;
                 nextID++;
                 let username = data.username;
-                let tempArray = games.filter((x)=>{return x.gameID == gameID}); //This finds the game object to add the player to
-                var index = games.indexOf(tempArray[0]);
+                let gameObj = games.filter((x)=>{return x.gameID == gameID})[0]; //This finds the game object to add the player to
+                var index = games.indexOf(gameObj);
                 var userJson = {
                     userID: Number(userID),
                     uniqueID: nextID - 1,
@@ -126,12 +132,16 @@ module.exports = function (app, path, session, db){
                     questionsCompleted: [] //after each question the time taken to answer and result is stored so it can be saved later on and used for analytics
                 }
                 games[index].players.push(userJson);
-                tempArray = sockets.filter((x) => {return x.id == games[index].gameID}); //Finds the socket of the host
-                index = sockets.indexOf(tempArray[0]);
+                socketObj = sockets.filter((x) => {return x.id == games[index].gameID})[0]; //Finds the socket of the host
+                index = sockets.indexOf(socketObj);
                 sockets[index].send(JSON.stringify({type: "userJoin", userID: userID, username: username})); //tells the host that a user has connected and passes any relevant details
             }
+            /* 
+            this is the code which deals with the host moving to the next question
+            
+            */
             else if (data.type == "nextQuestion"){
-                let quizObj = games.filter((x) => {return x.gameID == socket.id})[0];
+                let quizObj = getQuizObj(games, socket.id);
                 let index = games.indexOf(quizObj);
                 games[index].answered = 0;
                 //This query selects the question mappings to find the questionIDs for the selected quiz
@@ -148,7 +158,7 @@ module.exports = function (app, path, session, db){
                                 userSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question})); //Sends the questionPreview message to the client
                             }
                             //Does the same as above but for the host.
-                            hostSocket = sockets.filter((x) => {return x.id == quizObj.gameID})[0];
+                            hostSocket = getSocketObj(sockets, quizObj.gameID);
                             hostSocket.send(JSON.stringify({type: "previewQuestion", questionNo: quizObj.currQuestion + 1, question: question}));
                             setTimeout(() => { //This sends the clients the presentQuestion message telling them that the user can now submit a question
                                 games[index].currQuestionData.startTime = new Date().getTime() / 1000;
@@ -188,7 +198,7 @@ module.exports = function (app, path, session, db){
                                 }
                             })
                         }
-                        let hostSocket = sockets.filter((x) => {return x.id == games[index].gameID})[0];
+                        let hostSocket = getSocketObj(sockets, games[index].gameID);
                         hostSocket.send(JSON.stringify({type: "gameOver", players: players}));
                     }
                 });
@@ -211,13 +221,13 @@ module.exports = function (app, path, session, db){
                 if(!answerCorrect) timeToAnswer = timeToAnswer * 100;
                 games[gameIndex].players[playerIndex].score += score;
                 games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
-                let hostSocket = sockets.filter((x) => {return x.id == gameObj.gameID})[0];
+                let hostSocket = getSocketObj(sockets, gameObj.gameID);
                 games[gameIndex].answered += 1;
                 hostSocket.send(JSON.stringify({type: "answerUpdate", totalAnswered: gameObj.answered, totalUsers: gameObj.players.length}));
                 socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
             }
             else if (data.type == "finishQuestion"){
-                var gameObj = games.filter((x) => {return x.gameID == socket.id})[0];
+                var gameObj = getQuizObj(games, socket.id);
                 var index = games.indexOf(gameObj);
                 var totalUsers = gameObj.players.length;
                 var questionData = gameObj.currQuestionData;
@@ -243,7 +253,7 @@ module.exports = function (app, path, session, db){
                     var userSocket = sockets.filter((x) => {return x.id == userObj.uniqueID})[0];
                     userSocket.send(JSON.stringify({type: "resultData", result: result}));
                 }
-                var hostSocket = sockets.filter((x) => {return x.id == gameObj.gameID})[0];
+                var hostSocket = getSocketObj(sockets, gameObj.gameID);
                 hostSocket.send(JSON.stringify({type: "resultData", totalCorrect: totalCorrect, totalUsers: totalUsers, userList: gameObj.players, correctAnswer: correctAnswer}));
                 games[index].currState = gameState.idle;
                 games[index].currQuestion += 1;
@@ -343,7 +353,6 @@ module.exports = function (app, path, session, db){
                     var totalPrecedence = (timeDifference * 0.5) + timePrecedence;
                     answeredList[i].precedence = totalPrecedence;
                     var questionObj = allQuestions.filter((x) => {return x.questionID == answeredList[i].questionID})[0];
-                    console.log(totalPrecedence)
                     //I dont know how this is as quick as it is but i should look into a different way of handling this
                     for (var x = 0; x < totalPrecedence; x++){
                         allQuestions.push(questionObj);
@@ -370,6 +379,16 @@ module.exports = function (app, path, session, db){
             res.sendFile(path.join(__dirname, "../Frontend/personalisedQuiz.html"));
         }
     })
+}
+
+function getQuizObj(games, gameID){
+    let obj = games.filter((x) => {return x.gameID == gameID})[0];
+    return obj;
+}
+
+function getSocketObj(sockets, socketID){
+    let obj = sockets.filter((x) => {return x.id == socketID})[0];
+    return obj;
 }
 
 function saveAnswer(db, userID, questionID, timeToAnswer, result){
