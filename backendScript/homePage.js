@@ -74,5 +74,34 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             var username = results[0].username;
             res.json({username: username});
         })
-    })
+    });
+
+    app.get("/classView", (req, res) => {
+        if (req.session.user && req.session.user.userType == 1){
+            res.sendFile(path.join(__dirname, "../Frontend/classView.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
+    });
+
+    app.post("/getUserAnalyticsByID", (req, res) => {
+        var userID = req.body.userID;
+        db.query("SELECT * FROM analytics WHERE userID = ?", [userID], (err, results) => {
+            results.sort((a,b) => a.avgTime - b.avgTime);
+            let topicsDone = [];
+            let topicAvg = [];
+            for (var i = 0; i < results.length; i++){
+                if (!(topicsDone.includes(results[i].topic))){
+                    let allTopicQuestions = results.filter((analytic) => {return analytic.topic = results[i].topic});
+                    var total = 0;
+                    allTopicQuestions.map((analytic) => {total = total + analytic.avgTime});
+                    var avg = total / allTopicQuestions.length;
+                    topicAvg.push({topic: results[i].topic, avg: avg});
+                }
+                topicAvg.sort((a,b) => a.avg-b.avg);
+            }
+            res.json({results: results, bestTopic: topicAvg[0], wosrtTopic: topicAvg[topicAvg.length - 1]});
+        });
+    });
 }
