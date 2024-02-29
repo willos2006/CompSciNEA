@@ -25,7 +25,7 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             db.query("SELECT * FROM classes WHERE teacher = ?", [req.session.user.userID], (err, results) => {
                 if (err) throw err;
                 initialRes = results;
-                db.query("SELECT * FROM classMap WHERE classOwnerID = ?", [req.session.user.userID], (err, results) => {
+                db.query("SELECT * FROM classMap, userdets WHERE classOwnerID = ? AND userdets.userID = classMap.userID", [req.session.user.userID], (err, results) => {
                     if (err) throw err;
                     for (let i = 0; i < initialRes.length; i++){
                         tempArr = results.filter((x) => {return x.classID == initialRes[i].classID});
@@ -87,21 +87,72 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
 
     app.post("/getUserAnalyticsByID", (req, res) => {
         var userID = req.body.userID;
-        db.query("SELECT * FROM analytics WHERE userID = ?", [userID], (err, results) => {
-            results.sort((a,b) => a.avgTime - b.avgTime);
-            let topicsDone = [];
-            let topicAvg = [];
-            for (var i = 0; i < results.length; i++){
-                if (!(topicsDone.includes(results[i].topic))){
-                    let allTopicQuestions = results.filter((analytic) => {return analytic.topic = results[i].topic});
-                    var total = 0;
-                    allTopicQuestions.map((analytic) => {total = total + analytic.avgTime});
-                    var avg = total / allTopicQuestions.length;
-                    topicAvg.push({topic: results[i].topic, avg: avg});
+        db.query("SELECT * FROM analytics, question WHERE analytics.userID = ? AND question.questionID = analytics.questionID", [userID], (err, results) => {
+            if (err) throw err;
+            if (results.length > 0){
+                results.sort((a,b) => a.avgTime - b.avgTime);
+                let topicsDone = [];
+                let topicAvg = [];
+                for (var i = 0; i < results.length; i++){
+                    if (!(topicsDone.includes(results[i].topic))){
+                        let allTopicQuestions = results.filter((analytic) => {return analytic.topic == results[i].topic});
+                        var total = 0;
+                        allTopicQuestions.map((analytic) => {total = total + analytic.avgTime});
+                        var avg = total / allTopicQuestions.length;
+                        topicAvg.push({topic: results[i].topic, avg: avg});
+                    }
                 }
                 topicAvg.sort((a,b) => a.avg-b.avg);
+                res.json({results: results, bestTopic: topicAvg[0], worstTopic: topicAvg[topicAvg.length - 1]});
             }
-            res.json({results: results, bestTopic: topicAvg[0], wosrtTopic: topicAvg[topicAvg.length - 1]});
+            else{
+                res.json({results: false});
+            }
         });
     });
+
+    app.post("/addUserToClass", (req, res) => {
+        var classID = req.body.classID;
+        var username = req.body.username;
+        var ownerID = req.session.user.userID
+        db.query("SELECT * FROM userdets WHERE username = ? AND userType = 0", [username], (err, results) => {
+            if (err) throw err;
+            if (results.length > 0){
+                var userID = results[0].userID;
+                db.query("SELECT * FROM classmap WHERE userID = ? AND classID = ?", [userID, classID], (err, results) => {
+                    if (err) throw err;
+                    if (results.length == 0){
+                        db.query("INSERT INTO classmap (userID, classID, classOwnerID) VALUES (?, ?, ?)", [userID, classID, ownerID], (err, results) => {
+                            if (err) throw err;
+                            res.json({res: true});
+                        });
+                    }
+                    else{
+                        res.json({res:false, errorMsg: "User already added to class"});
+                    }
+                });
+            }
+            else{
+                res.json({res:false, errorMsg: "Student does not exist"});
+            }
+        })
+    });
+
+    app.get("/deleteUserFromClass", (req, res) => {
+        if(req.session.user && req.session.user.userType == 1){
+            var userID = req.query.userID;
+            var classID = req.query.classID;
+            db.query("DELETE FROM classmap WHERE userID = ? AND classID = ?", [userID, classID], (err, results) => {
+                if (err){
+                    res.send("There was an error. Use the back arrow to return");
+                }
+                else{
+                    res.redirect("http://localhost:4000/classView?classID=" + classID);
+                }
+            })
+        }
+        else{
+            res.send("You do not have permission to do this.")
+        }
+    })
 }

@@ -22,11 +22,30 @@
             </div>
         </div>
     </div>
-    <div class="container">
+    <div class="container px-4">
         <h1 id="classNameText"></h1>
-        <h3>Students:</h3>
-        <ul id="studentList">
+        <br><br>
+        <div class="row gy-4">
+            <div class="col-md-6">
+                <h3>Students:</h3>
+                <ul id="studentList">
 
-        </ul>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h3>Class Statistics:</h3>
+                <ul>
+                    <li>Best topic: <a id="bestTopicText"></a></li>
+                    <li>Worst topic: <a id="worstTopicText"></a></li>
+                    <li>Average Time: <a id="avgTimeText"></a></li>
+                </ul>
+                <div>
+                    <h3>Add a user:</h3>
+                    <label for="usernameInput">Enter the user to add:</label>
+                    <input type="text" name="usernameInput" id="usernameInput" placeholder="Enter Username"/>
+                    <button class="btn btn-primary" id="addUser">Add User</button>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
