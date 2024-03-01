@@ -1,9 +1,9 @@
 <head>
-    <title>Class View</title>
+    <title>Home Page</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="./script/classViewScript.js"></script>
+    <script src="./script/studentClassViewScript.js"></script>
 </head>
 <body>
     <div class="navbar navbar-expand-sm bg-light">
@@ -23,30 +23,17 @@
         </div>
     </div>
     <div class="container px-4">
-        <h1 id="classNameText"></h1>
-        <br><br>
         <div class="row gy-4">
             <div class="col-md-6">
-                <h3>Students:</h3>
-                <ul id="studentList">
-
-                </ul>
+                <h3>Classes</h3>
+                <ul id="classList"></ul>
             </div>
             <div class="col-md-6">
-                <h3>Class Statistics:</h3>
-                <ul>
-                    <li>Best topic: <a id="bestTopicText"></a></li>
-                    <li>Worst topic: <a id="worstTopicText"></a></li>
-                    <li>Average Time: <a id="avgTimeText"></a></li>
-                </ul>
-                <div>
-                    <h3>Add a user:</h3>
-                    <label for="usernameInput">Enter the user to add:</label>
-                    <input type="text" name="usernameInput" id="usernameInput" placeholder="Enter Username"/>
-                    <button class="btn btn-primary" id="addUser">Add User</button>
-                    <h3>OR</h3>
-                    <h4>Use this code: <a id="uniqueID"></a></h4>
-                </div>
+                <h3>Join a class:</h3>
+                <h4>Either ask your teacher to add you or enter the unique code below:</h4>
+                <label for="code">Enter Code:</label>
+                <input type="number" id="code" name="code" placeholder="code"/>
+                <button class="btn btn-primary" id="submitBtn">Add to Class</button>
             </div>
         </div>
     </div>

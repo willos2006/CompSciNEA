@@ -16,6 +16,14 @@ $(document).ready(() => {
     var bestTopics = []
     var worstTopics = []
 
+    var uniqueID;
+    $.ajaxSetup({async: false});
+    $.post("/getUniqueClassID", {classID: classID}, (data) => {
+        let id = data.code;
+        console.log(id);
+        $("#uniqueID").html(id);
+    });
+
     $("#classNameText").html(classObj.quickName);
 
     var timeTotal = 0;
@@ -70,7 +78,6 @@ $(document).ready(() => {
     }
 
     let avgTime = timeTotal / avgCount;
-    console.log(avgCount);
 
     if (avgCount > 0){
         bestTopics.sort((a,b) => a.count - b.count);

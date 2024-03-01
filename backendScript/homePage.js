@@ -85,6 +85,14 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         }
     });
 
+    app.post("/getUniqueClassID", (req, res) => {
+        let uniqueID = generateRandomUniqueCode();
+        let classID = req.body.classID;
+        let ownerID = req.session.user.userID;
+        uniqueClassCodes.push({uniqueID: uniqueID, classID: classID, ownerID: ownerID});
+        res.json({code: uniqueID});
+    })
+
     app.post("/getUserAnalyticsByID", (req, res) => {
         var userID = req.body.userID;
         db.query("SELECT * FROM analytics, question WHERE analytics.userID = ? AND question.questionID = analytics.questionID", [userID], (err, results) => {
@@ -154,5 +162,60 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         else{
             res.send("You do not have permission to do this.")
         }
-    })
+    });
+
+    var uniqueClassCodes = []; //array which stores all the current codes in use for students to be added to classes
+
+    app.post("/addUserToClassByCode", (req, res) => {
+        let code = req.body.uniqueCode;
+        let userID = req.session.user.userID;
+        var classObj = getClassByUniqueID(code);
+        if (classObj != -1){
+            var classID = classObj.classID;
+            var ownerID = classObj.ownerID;
+            //NEED TO CHECK THAT USER DOES NOT ALREADY EXSIT IN CLASS - NEED TO ADD THIS CHECK
+            db.query("INSERT INTO classmap (userID, classID, classOwnerID) VALUES (?, ?, ?)", [userID, classID, ownerID], (err, results) => {
+                if(err) throw err;
+                res.json({res: true});
+            });
+        }
+        else{
+            res.json({res:false, errorMsg: "Code is invalid"});
+        }
+    });
+
+    app.get("/studentClassView", (req, res) => {
+        if (req.session.user && req.session.user.userType == 0){
+            res.sendFile(path.join(__dirname, "../Frontend/studentClassView.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
+    });
+
+    function getClassByUniqueID(uniqueID){
+        let tempClassObj = uniqueClassCodes.filter((obj) => {return obj.uniqueID == uniqueID});
+        if (tempClassObj.length > 0){
+            return tempClassObj[0];
+        }
+        else{
+            return -1;
+        }
+    }
+
+    function generateRandomUniqueCode(){
+        let currentCodes = [];
+        uniqueClassCodes.map((obj) => {currentCodes.push(obj.uniqueID)});
+        let randomNumber = Math.floor(Math.random() * (99999-10000) + 10000);
+        while (currentCodes.includes(randomNumber)){
+            randomNumber = Math.floor(Math.random() * (99999-10000) + 10000);
+        }
+        return randomNumber;
+    }
+
+    function getUserClasses(userID){
+        db.query("SELECT * FROM classmap, classes WHERE classmap.userID = ? AND classmap.classID = classes.classID", [userID], (req, results) => {
+            return results;
+        });
+    }
 }

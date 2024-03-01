@@ -10,4 +10,8 @@ $(document).ready(() => {
     $("#revisionOption").on("click", () => {
         window.location = "http://localhost:4000/personalisedQuiz";
     });
+
+    $("#classOption").on("click", () => {
+        window.location = "http://localhost:4000/studentClassView"
+    })
 })
