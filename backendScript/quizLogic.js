@@ -336,11 +336,6 @@ module.exports = function (app, path, session, db){
             db.query("SELECT * FROM question", (err, results) => {
                 if (err) throw err;
                 var allQuestions = results;
-                var questionsLeft = results.filter((x) => {
-                    let answeredIDs = [];
-                    answeredList.map((y) => {answeredIDs.push(x.questionIDd)});
-                    return !(answeredIDs.includes(x.questionID));
-                });
                 answeredList.sort((a,b) => b.avgTime - a.avgTime); //sorts the list by time taken to answer
                 for (var i = 0; i < answeredList.length; i++){
                     var timePrecedence = 2.4**-i * 100 * answeredList[i].avgTime;
