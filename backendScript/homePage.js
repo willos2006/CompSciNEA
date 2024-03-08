@@ -193,6 +193,13 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         }
     });
 
+    app.post("/getStudentClassesByID", (req, res) => {
+        let studentID = req.session.user.userID;
+        db.query("SELECT classes.quickName, userDets.username FROM classmap, classes, userDets WHERE classmap.userID = ? AND classmap.classID = classes.classID AND userDets.userID = classmap.classOwnerID", [studentID], (req, results) => {
+            res.json({classList: results});
+        });
+    });
+
     function getClassByUniqueID(uniqueID){
         let tempClassObj = uniqueClassCodes.filter((obj) => {return obj.uniqueID == uniqueID});
         if (tempClassObj.length > 0){
@@ -211,11 +218,5 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             randomNumber = Math.floor(Math.random() * (99999-10000) + 10000);
         }
         return randomNumber;
-    }
-
-    function getUserClasses(userID){
-        db.query("SELECT * FROM classmap, classes WHERE classmap.userID = ? AND classmap.classID = classes.classID", [userID], (req, results) => {
-            return results;
-        });
     }
 }

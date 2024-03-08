@@ -13,4 +13,11 @@ $(document).ready(() => {
             }
         })
     });
+    $.post("/getStudentClassesByID", data => {
+        for (var i = 0; i < data.classList.length; i++){
+            var className = data.classList[i].quickName;
+            var teacherName = data.classList[i].username;
+            $("#classList").append(`<li>Class Name ${className}<ul><li>Teacher: ${teacherName}</li></ul></li>`)
+        }
+    });
 });
