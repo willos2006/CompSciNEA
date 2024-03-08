@@ -336,6 +336,7 @@ module.exports = function (app, path, session, db){
             db.query("SELECT * FROM question", (err, results) => {
                 if (err) throw err;
                 var allQuestions = results;
+                var precendenceList = [];
                 answeredList.sort((a,b) => b.avgTime - a.avgTime); //sorts the list by time taken to answer
                 for (var i = 0; i < answeredList.length; i++){
                     var timePrecedence = 2.4**-i * 100 * answeredList[i].avgTime;
@@ -346,11 +347,19 @@ module.exports = function (app, path, session, db){
                     var questionObj = allQuestions.filter((x) => {return x.questionID == answeredList[i].questionID})[0];
                     //I dont know how this is as quick as it is but i should look into a different way of handling this
                     for (var x = 0; x < totalPrecedence; x++){
-                        allQuestions.push(questionObj);
+                        precendenceList.push(questionObj);
                     }
                 }
-                let randomNumber = Math.floor(Math.random() * (allQuestions.length));
-                var question = allQuestions[randomNumber];
+                let type = Math.floor(Math.random() * (100));
+                var question;
+                if (type > 50){
+                    let index = Math.floor(Math.random() * (allQuestions.length));
+                    question = allQuestions[index];
+                }
+                else{
+                    let index = Math.floor(Math.random() * (precendenceList.length));
+                    question = precendenceList[index];
+                }
                 res.json({questionData: question});
             });
         })

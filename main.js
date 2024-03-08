@@ -1,12 +1,15 @@
+//These are all the modules used in the project
 const express = require("express");
 const crypto = require("crypto");
-const salt = "f844b09ff50c"
-const app = express()
 const bodyParser = require("body-parser")
 const path = require("path");
 const session = require("express-session");
 const mysql = require("mysql2");
+
 const port = 4000;
+const app = express()
+
+const salt = "f844b09ff50c"
 
 var con = mysql.createConnection({
     host:"localhost",
