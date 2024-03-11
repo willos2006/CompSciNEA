@@ -214,13 +214,13 @@ module.exports = function (app, path, session, db){
                 let timeToAnswer = (new Date().getTime() / 1000) - gameObj.currQuestionData.startTime;
                 var answerCorrect = answer == gameObj.currQuestionData.correctAns;
                 let score = 10000 * (2.64 ** (-timeToAnswer*0.3));
+                socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
                 if(!answerCorrect) timeToAnswer = timeToAnswer * 100;
                 if (answerCorrect) games[gameIndex].players[playerIndex].score += score;
                 games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
                 let hostSocket = getSocketObj(sockets, gameObj.gameID);
                 games[gameIndex].answered += 1;
                 hostSocket.send(JSON.stringify({type: "answerUpdate", totalAnswered: gameObj.answered, totalUsers: gameObj.players.length}));
-                socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
             }
             else if (data.type == "finishQuestion"){
                 var gameObj = getQuizObj(games, socket.id);
