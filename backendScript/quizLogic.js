@@ -182,10 +182,9 @@ module.exports = function (app, path, session, db){
                                     let currQuestionObj = currPlayer.questionsCompleted[question];
                                     if (questionIDs.includes(currQuestionObj.questionID)){
                                         let analyticsObj = results.filter((x) => {return x.questionID == currQuestionObj.questionID})[0];
-                                        let total = analyticsObj.avgTime * analyticsObj.timesAnswered;
+                                        let total = analyticsObj.avgTime * 5;
                                         total += currQuestionObj.timeToAnswer;
-                                        let timesAnswered = analyticsObj.timesAnswered + 1
-                                        let avgTime = total / timesAnswered;
+                                        let avgTime = total / 6;
                                         db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [avgTime, timesAnswered, currPlayer.userID, currQuestionObj.questionID], (err, results) => {if (err) throw err;});
                                     }
                                     else{
@@ -213,7 +212,7 @@ module.exports = function (app, path, session, db){
                 let answer = data.option;
                 let timeToAnswer = (new Date().getTime() / 1000) - gameObj.currQuestionData.startTime;
                 var answerCorrect = answer == gameObj.currQuestionData.correctAns;
-                let score = 10000 * (2.64 ** (-timeToAnswer*0.3));
+                let score = 10000 * (2.71 ** (-timeToAnswer*0.3));
                 socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
                 if(!answerCorrect) timeToAnswer = timeToAnswer * 100;
                 if (answerCorrect) games[gameIndex].players[playerIndex].score += score;

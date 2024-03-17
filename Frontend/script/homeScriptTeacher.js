@@ -10,4 +10,7 @@ $(document).ready(()=>{
     $("#quizOption").on("click", ()=>{
         window.location = "http://localhost:4000/quizSelect"
     });
+    $("#setHwOption").on("click", () => {
+        window.location = "http://localhost:4000/setHomework";
+    })
 });

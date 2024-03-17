@@ -200,6 +200,12 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         });
     });
 
+    app.get("/setHomework", (req, res) => {
+        if (req.session.user && req.session.user.userType == 1){
+            res.sendFile(path.join(__dirname, "../Frontend/setHomework.html"));
+        }
+    })
+
     function getClassByUniqueID(uniqueID){
         let tempClassObj = uniqueClassCodes.filter((obj) => {return obj.uniqueID == uniqueID});
         if (tempClassObj.length > 0){
