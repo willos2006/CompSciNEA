@@ -23,16 +23,21 @@
         </div>
     </div>
     <div class="container">
+        <h3>Set a homework:</h3>
         <div id="hwForm">
             <label for="title">Enter a title:</label>
             <input style="display: block;" type="text" name="title" id="title" placeholder="Enter Title"/>
-            <label for="description">Enter a description:</label>
-            <input style="display: block;" type="text" name="description" id="description" placeholder="Enter Description"/>
+            <label for="description">Enter a description (Drag downwards to resize textbox):</label>
+            <textarea style="display: block;" type="text" name="description" id="description" placeholder="Enter Description"></textarea>
             <label for="date">Enter a due date:</label>
             <input style="display: block;" type="date" name="date" id="date"/>
             <label for="time">Enter an estimated time (in minutes):</label>
             <input style="display: block;" type="number" name="time" id="time" placeholder="Enter Time"/>
-            <a style="display: block;">Select classes to assign:</a>
+            <label for="class">Select a class:</label>
+            <select style="display: block;"id="class" placeholder="Select a Class"></select>
+            <label for="quiz">Select a quiz:</label>
+            <select style="display: block;"id="quiz" placeholder="Select a Quiz"></select><br>
+            <button class="btn btn-warning" id="setHwBtn">Set Homework</button>
         </div>
     </div>
 </body>

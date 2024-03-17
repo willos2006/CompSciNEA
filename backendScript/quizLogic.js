@@ -1,4 +1,6 @@
 module.exports = function (app, path, session, db){
+    const util = require('util');
+    
     const webSocket = require("ws");
     const socketServer = new webSocket.Server({
         port: 8080
@@ -327,6 +329,29 @@ module.exports = function (app, path, session, db){
         }
     });
 
+    app.post("/validHomework", (req, res) => {
+        var userID = req.session.user.userID;
+        var hwID = req.body.hwID;
+        var quizID = req.body.quizID;
+        db.query("SELECT * FROM homeworksubmission WHERE hwID = ? AND userID = ?", [hwID, userID], (err, results) => {
+            if (err) throw err;
+            if (results.length > 0){
+                res.json({res: false, message: "Homework already completed"});
+            }
+            else{
+                db.query("SELECT * FROM homeworkset WHERE hwID = ? AND quizID = ?", [hwID, quizID], (err, results) =>{
+                    if (err) throw err;
+                    if (results.length == 0){
+                        res.json({res: false, message: "Invalid homework; Quiz does not match homework set"});
+                    }
+                    else{
+                        res.json({res: true});
+                    }
+                })
+            }
+        });
+    })
+
     app.post("/getQuestion", (req, res) => {
         var userID = req.session.user.userID;
         db.query("SELECT * FROM analytics WHERE userID = ?", [userID], (err, results) => {
@@ -371,12 +396,36 @@ module.exports = function (app, path, session, db){
         var result = req.body.result;
         saveAnswer(db, userID, questionID, timeToAnswer, result);
         res.json({res: true});
+    });
+
+    app.post("/submitHomework", async (req, res) => {
+        let hwID = req.body.hwID;
+        let userID = req.session.user.userID;
+        let questions = req.body.questions;
+        var query = util.promisify(db.query).bind(db);
+        for (var i = 0; i < questions.length; i++){
+            let result = questions[i].result;
+            let timetaken = questions[i].timetaken;
+            let questionID = questions[i].questionID;
+            let dbQuery = await query("INSERT INTO homeworksubmission (hwID, userID, result, timeTaken, questionID, dateSubmitted) VALUES (?,?,?,?,?, NOW())", [hwID, userID, result, timetaken, questionID]);
+            if (result == 0) {timetaken *= 10; result = false};
+            saveAnswer(db, userID, questionID, timetaken, result);
+        }
+        res.json({res: true});
     })
 
     app.get("/personalisedQuiz", (req, res) =>{
         if (req.session.user && req.session.user.userType == 0){
             res.sendFile(path.join(__dirname, "../Frontend/personalisedQuiz.html"));
         }
+    });
+
+    app.post("/getQuizByID", (req, res) => {
+        let quizID = req.body.quizID;
+        db.query("SELECT * FROM question, questionmapping WHERE question.questionID = questionmapping.questionID and questionmapping.quizID = ?", [quizID], (err, results) => {
+            if (err) throw err;
+            res.json({questions: results});
+        })
     })
 }
 

@@ -20,8 +20,26 @@ $(document).ready(() => {
     $.ajaxSetup({async: false});
     $.post("/getUniqueClassID", {classID: classID}, (data) => {
         let id = data.code;
-        console.log(id);
         $("#uniqueID").html(id);
+    });
+
+    $.post("/getHomeworkByClass", {classID: classID}, (data) => {
+        let recentHomeworks = [];
+        let differenceMs = 1000*60*60*24*8;
+        data.homeworks.map((homework) => {
+            if (Math.abs(new Date().getTime() - new Date(homework.dueDate).getTime()) < differenceMs){
+                recentHomeworks.push(homework);
+            }
+        });
+        if(recentHomeworks.length > 0){
+            for (var i = 0; i < recentHomeworks.length; i++){
+                let html = `<li>${recentHomeworks[i].title}<ul><li>Due on: ${new Date(recentHomeworks[i].dueDate).toDateString()}</li><li><a href="http://localhost:4000/homeworkDetail?hwID=${recentHomeworks[i].hwID}">View Details</a></li></ul></li>`;
+                $("#hwList").append(html)
+            }
+        }
+        else{
+            $("#hwList").append("No homeworks are due within a week");
+        }
     });
 
     $("#classNameText").html(classObj.quickName);

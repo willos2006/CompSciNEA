@@ -1,0 +1,69 @@
+<head>
+    <title>Home Page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="./script/studentHomeworkViewScript.js"></script>
+</head>
+<body>
+    <div class="navbar navbar-expand-sm bg-light">
+        <div class="container-fluid">
+            <h1 class="navbar-brand">Student</h1>
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Test 1</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Test 2</a>
+                </li>
+            </ul>
+            <div class="d-flex">
+                <button class="btn btn-primary" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row gy-4">
+            <div id="toDoDiv" class="col-md-6">
+                <h2>To Do:</h2>
+                <ul id="toDoList"><li id="todoPlaceholder">None</li></ul>
+            </div>
+            <div id="overDueDiv" class="col-md-6">
+                <h2>Overdue:</h2>
+                <ul id="overdueList"><li id="overduePlaceholder">None</li></ul>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="hwInfoModal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+      
+            <div class="modal-header">
+              <h4 class="modal-title" id="hwTitle">...</h4>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+      
+            <div class="modal-body">
+                <p id="classTxt">...</p>
+                <p id="setByTxt">...</p>
+                <p id="completionTimeTxt">...</p>
+                <p id="dueDate">...</p>
+                Description:
+                <p id="descTxt">...</p>
+            </div>
+      
+            <div class="modal-footer">
+                <a>Note: You must complete all the homework in a single session. Progress is not saved until the end!</a>
+                <button style="float: left;" type="button" class="btn btn-primary" id="completeHW">Start Homework</button>
+            </div>
+      
+          </div>
+        </div>
+      </div>
+</body>
+<style>
+    .hwHyperlink{
+        color: blue;
+        text-decoration: underline;
+    }
+</style>

@@ -1,4 +1,6 @@
 module.exports = function(app, path, crypto, salt, bodyParser, session, db){
+    const util = require('util');
+    
     app.get("/home", (req, res) => {
         if(req.session.user && req.session.user.userType == 1){
             res.sendFile(path.join(__dirname, "../Frontend/homePageTeacher.html"));
@@ -193,6 +195,20 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         }
     });
 
+    app.get("/viewHomework", (req, res) => {
+        if(req.session.user){
+            if(req.session.user.userType == 1){
+                res.sendFile(path.join(__dirname, "../Frontend/teacherHomeworkView.html"));
+            }
+            else{
+                res.sendFile(path.join(__dirname, "../Frontend/studentHomeworkView.html"));
+            }
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
+    })
+
     app.post("/getStudentClassesByID", (req, res) => {
         let studentID = req.session.user.userID;
         db.query("SELECT classes.quickName, userDets.username FROM classmap, classes, userDets WHERE classmap.userID = ? AND classmap.classID = classes.classID AND userDets.userID = classmap.classOwnerID", [studentID], (req, results) => {
@@ -204,7 +220,63 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         if (req.session.user && req.session.user.userType == 1){
             res.sendFile(path.join(__dirname, "../Frontend/setHomework.html"));
         }
+        else{
+            res.redirect("http://localhost:4000/")
+        }
+    });
+    
+    app.post("/getUserHomework", async (req, res) => {
+        let userID = req.session.user.userID;
+        var query = util.promisify(db.query).bind(db);
+        var classes = await query("SELECT classID FROM classmap WHERE classmap.userID = ?", [userID]);
+        var hw = [];
+        for (var i = 0; i < classes.length; i++){
+            var homeworks = await query("SELECT homeworkset.hwID, homeworkset.classID, homeworkset.message, homeworkset.expectedMinutes, homeworkset.dueDate, homeworkset.title, homeworkset.quizID, userdets.username, classes.quickName FROM homeworkset, userdets, classes WHERE homeworkset.classID = ? AND homeworkset.classID = classes.classID AND classes.teacher = userdets.userID", [classes[i].classID]);
+            homeworks.map((homework) => {hw.push(homework)});
+        }
+        var userSubmissionsResult = await query("SELECT hwID FROM homeworksubmission WHERE userID = ?", [userID]);
+        var userSubmissions = []
+        userSubmissionsResult.map((submission) => {userSubmissions.push(submission.hwID)});
+        for (var i = 0; i < hw.length; i++){
+            if(userSubmissions.includes(hw[i].hwID)){
+                hw.pop(i);
+            }
+        }
+        res.json({homework: hw});
+    });
+
+    app.post("/setHomework", (req, res) => {
+        let title = req.body.title;
+        let desc = req.body.desc;
+        let due = req.body.due;
+        let time = req.body.time;
+        let classID = req.body.classID;
+        let quizID = req.body.quizID;
+
+        due = JStoSQLDate(new Date(due));
+
+        db.query("INSERT INTO homeworkset (classID, message, expectedMinutes, dueDate, title, quizID) VALUES (?,?,?,?,?,?)", [classID, desc, time, due, title, quizID], (err, results) => {
+            if(err) throw err;
+            res.json({valid: true, message: "Homework Set"});
+        })
+    });
+
+    app.get("/completeHomework", (req, res) => {
+        if(req.session.user && req.session.user.userType == 0){
+            res.sendFile(path.join(__dirname, "../Frontend/completeHW.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/")
+        }
     })
+
+    app.post("/getHomeworkByClass", (req, res) => {
+        let classID = req.body.classID;
+        db.query("SELECT * FROM homeworkset WHERE classID = ? ORDER BY dueDate DESC", [classID], (err, results) => {
+            if (err) throw err;
+            res.json({homeworks: results});
+        });
+    });
 
     function getClassByUniqueID(uniqueID){
         let tempClassObj = uniqueClassCodes.filter((obj) => {return obj.uniqueID == uniqueID});
@@ -224,5 +296,10 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
             randomNumber = Math.floor(Math.random() * (99999-10000) + 10000);
         }
         return randomNumber;
+    }
+
+    function JStoSQLDate(date){
+        let dateString = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+        return dateString; 
     }
 }

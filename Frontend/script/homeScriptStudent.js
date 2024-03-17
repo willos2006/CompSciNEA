@@ -13,5 +13,8 @@ $(document).ready(() => {
 
     $("#classOption").on("click", () => {
         window.location = "http://localhost:4000/studentClassView"
-    })
+    });
+    $("#homeworkOption").on("click", () => {
+        window.location = "http://localhost:4000/viewHomework";
+    });
 })
