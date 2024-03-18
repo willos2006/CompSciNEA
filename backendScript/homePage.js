@@ -39,6 +39,29 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         }
     });
 
+    app.get("/viewAllHW", (req, res) => {
+        if (req.session.user && req.session.user.userType == 1){
+            res.sendFile(path.join(__dirname, "../Frontend/viewAllHw.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
+    });
+
+    app.post("/getAllHws", async (req, res) => {
+        let userID = req.session.user.userID;
+        var query = util.promisify(db.query).bind(db);
+        query = util.promisify(db.query).bind(db);
+        let classes = await query("SELECT classID from classes WHERE teacher = ?", [userID]);
+        hws = [];
+        await Promise.all(classes.map(async (classObj) => {
+            let classID = classObj.classID;
+            let homeworks = await query("SELECT homeworkset.hwID, homeworkset.title, classes.quickName FROM homeworkset, classes WHERE homeworkset.classID = ? AND classes.classID = homeworkset.classID", [classID]);
+            hws.push(homeworks);
+        }));
+        res.json({hws: hws});
+    });
+
     app.post("/getHwDetails", (req, res) => {
         let hwID = req.body.hwID;
         var query = util.promisify(db.query).bind(db);
@@ -56,14 +79,16 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
                         question = question[0].question;
                         if (idsDone.includes(result.userID)){
                             let index = idsDone.indexOf(result.userID);
-                            submissions[index].questions.push({result: result.userID, timeTaken: result.timeTaken, question: question, dateSubmitted: result.dateSubmitted});
+                            submissions[index].questions.push({result: result.result, timeTaken: result.timeTaken, question: question, dateSubmitted: result.dateSubmitted});
                         }
                         else{
-                            submissions.push({userID: result.userID, username: username[0].username, questions: [{result: result.userID, timeTaken: result.timeTaken, question: question, dateSubmitted: result.dateSubmitted}]})
+                            submissions.push({userID: result.userID, username: username[0].username, questions: [{result: result.result, timeTaken: result.timeTaken, question: question, dateSubmitted: result.dateSubmitted}]})
                         }
                         resolve();
                     });
                 }));
+                let questions = await query("SELECT * FROM question, questionmapping WHERE question.questionID = questionmapping.questionID AND questionmapping.quizID = ?", [homeworkDetails.quizID]);
+                homeworkDetails.questions = questions;
                 res.json({hwDetails: homeworkDetails, submissions: submissions});
             });
         })

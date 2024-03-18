@@ -13,4 +13,7 @@ $(document).ready(()=>{
     $("#setHwOption").on("click", () => {
         window.location = "http://localhost:4000/setHomework";
     });
+    $("#viewHwOption").on("click", () => {
+        window.location = "http://localhost:4000/viewAllHW";
+    });
 });

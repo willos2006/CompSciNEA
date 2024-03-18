@@ -33,21 +33,29 @@
             <div class="col-md-6">
                 <div id="infoDiv"><h2>Student Submissions:</h2></div>
             </div>
+            <div class="col-md-6">
+                <h3>Questions Set:</h3>
+                <ul id="questionsPreview"></ul>
+            </div>
         </div>
     </div>
     <div class="modal fade" id="hwInfoModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
           <div class="modal-content">
       
             <div class="modal-header">
-              <h4 class="modal-title"></h4>
+              <h4 class="modal-title"><h4 id="userName"></h4></h4>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
       
             <div class="modal-body">
+                <ul id="questionsOverview"></ul>
             </div>
       
-            <div class="modal-footer">
+            <div class="modal-footer" style="display: block;">
+                <a style="display: block;" id="submitted"></a>
+                <a style="display: block;" id="avgTime"></a>
+                <a style="display: block;" id="totalCorrect"></a>
             </div>
       
           </div>
