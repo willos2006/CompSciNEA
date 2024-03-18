@@ -39,6 +39,36 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         }
     });
 
+    app.post("/getHwDetails", (req, res) => {
+        let hwID = req.body.hwID;
+        var query = util.promisify(db.query).bind(db);
+        db.query("SELECT * FROM homeworkSet WHERE hwID = ?", [hwID], (err, results) => {
+            if (err) throw err;
+            let homeworkDetails = results[0];
+            db.query("SELECT * FROM homeworksubmission WHERE hwID = ?", [hwID], async (err, results) => {
+                let submissions = [];
+                await Promise.all(results.map(async (result) => {
+                    let question = await query("SELECT question FROM question WHERE questionID = ?", [result.questionID]);
+                    let username = await query("SELECT username FROM userdets WHERE userID = ?", [result.userID])
+                    await new Promise((resolve) => {
+                        let idsDone = [];
+                        submissions.map((submission) => {idsDone.push(submission.userID)})
+                        question = question[0].question;
+                        if (idsDone.includes(result.userID)){
+                            let index = idsDone.indexOf(result.userID);
+                            submissions[index].questions.push({result: result.userID, timeTaken: result.timeTaken, question: question, dateSubmitted: result.dateSubmitted});
+                        }
+                        else{
+                            submissions.push({userID: result.userID, username: username[0].username, questions: [{result: result.userID, timeTaken: result.timeTaken, question: question, dateSubmitted: result.dateSubmitted}]})
+                        }
+                        resolve();
+                    });
+                }));
+                res.json({hwDetails: homeworkDetails, submissions: submissions});
+            });
+        })
+    });
+
     app.post("/hostQuiz", (req, res) => {
         if(req.session.user.userType == 1){
             res.sendFile(path.join(__dirname, "../Frontend/quizHost.html"));
@@ -244,6 +274,15 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
         }
         res.json({homework: hw});
     });
+
+    app.get("/homeworkDetail", (req, res) => {
+        if (req.session.user && req.session.user.userType == 1){
+            res.sendFile(path.join(__dirname, "../Frontend/homeworkDetails.html"));
+        }
+        else{
+            res.redirect("http://localhost:4000/");
+        }
+    })
 
     app.post("/setHomework", (req, res) => {
         let title = req.body.title;
