@@ -148,7 +148,7 @@ module.exports = function (app, path, session, db){
                 games[index].answered = 0;
                 //This query selects the questions for the selected quiz
                 db.query("SELECT * FROM questionmapping, question WHERE questionmapping.quizID = ? AND questionmapping.questionID = question.questionID", [quizObj.quizID], (err, results) => {
-                    if (err) throw err;
+                    if (err) res.send({errorMsg: err});
                     if (results.length >= quizObj.currQuestion + 1){
                         let question = results[quizObj.currQuestion].question; //question
                         games[index].currQuestionData = results[quizObj.currQuestion];
@@ -172,25 +172,32 @@ module.exports = function (app, path, session, db){
                     else{
                         let players = games[index].players;
                         players.sort((a,b) => b.score - a.score);
+
                         for (var i = 0; i < players.length; i++){
                             let userSocket = sockets.filter((x) => {return x.id == players[i].uniqueID})[0];
                             userSocket.send(JSON.stringify({type: "gameOver", position: i + 1}));
+
                             let currPlayer = players[i];
+
                             db.query("SELECT * FROM analytics WHERE userID = ?", [currPlayer.userID], (err, results) => {
-                                if (err) throw err;
+                                if (err) res.send({errorMsg: err});
                                 questionIDs = [];
+
                                 results.map((x) => {questionIDs.push(x.questionID)});
                                 for (var question = 0; question < currPlayer.questionsCompleted.length; question++){
                                     let currQuestionObj = currPlayer.questionsCompleted[question];
                                     if (questionIDs.includes(currQuestionObj.questionID)){
                                         let analyticsObj = results.filter((x) => {return x.questionID == currQuestionObj.questionID})[0];
+                                        
                                         let total = analyticsObj.avgTime * 5;
                                         total += currQuestionObj.timeToAnswer;
+                                        let timesAnswered = analyticsObj.timesAnswered + 1;
                                         let avgTime = total / 6;
-                                        db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [avgTime, timesAnswered, currPlayer.userID, currQuestionObj.questionID], (err, results) => {if (err) throw err;});
+
+                                        db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [avgTime, timesAnswered, currPlayer.userID, currQuestionObj.questionID], (err, results) => {if (err) res.send({errorMsg: err});});
                                     }
                                     else{
-                                        db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())",[currPlayer.userID, currQuestionObj.questionID, currQuestionObj.timeToAnswer], (err, results) => {if (err) throw err;});
+                                        db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())",[currPlayer.userID, currQuestionObj.questionID, currQuestionObj.timeToAnswer], (err, results) => {if (err) res.send({errorMsg: err});});
                                     }
                                 }
                             })
@@ -211,15 +218,19 @@ module.exports = function (app, path, session, db){
                     }
                 })[0];
                 var gameIndex = games.indexOf(gameObj);
+
                 let answer = data.option;
                 let timeToAnswer = (new Date().getTime() / 1000) - gameObj.currQuestionData.startTime;
                 var answerCorrect = answer == gameObj.currQuestionData.correctAns;
                 let score = 10000 * (2.71 ** (-timeToAnswer*0.3));
+
                 socket.send(JSON.stringify({type: "answerAccepted", timeTaken: timeToAnswer}));
+
                 if(!answerCorrect) timeToAnswer = timeToAnswer * 100;
                 if (answerCorrect) games[gameIndex].players[playerIndex].score += score;
                 games[gameIndex].players[playerIndex].questionsCompleted.push({questionID: gameObj.currQuestionData.questionID, result: answerCorrect, timeToAnswer: timeToAnswer});
                 let hostSocket = getSocketObj(sockets, gameObj.gameID);
+
                 games[gameIndex].answered += 1;
                 hostSocket.send(JSON.stringify({type: "answerUpdate", totalAnswered: gameObj.answered, totalUsers: gameObj.players.length}));
             }
@@ -228,15 +239,18 @@ module.exports = function (app, path, session, db){
                 var index = games.indexOf(gameObj);
                 var totalUsers = gameObj.players.length;
                 var questionData = gameObj.currQuestionData;
+
                 let questionMapping = {
                     0: "ansA",
                     1: "ansB",
                     2: "ansC",
                     3: "ansD"
                 }
+
                 var correctAnswerIndex = questionMapping[questionData.correctAns];
                 var correctAnswer = questionData[correctAnswerIndex];
                 var totalCorrect = 0;
+
                 for (var i = 0; i < totalUsers; i++){
                     let userObj = gameObj.players[i];
                     var result;
@@ -329,22 +343,27 @@ module.exports = function (app, path, session, db){
         }
     });
 
+    //this checks that a homework that is being accessed is valid.
     app.post("/validHomework", (req, res) => {
         var userID = req.session.user.userID;
         var hwID = req.body.hwID;
         var quizID = req.body.quizID;
+
+        //query for selecting all homework submissions for the homework id
         db.query("SELECT * FROM homeworksubmission WHERE hwID = ? AND userID = ?", [hwID, userID], (err, results) => {
-            if (err) throw err;
-            if (results.length > 0){
+            if (err) res.send({errorMsg: err});
+            if (results.length > 0){ //This check makes sure that the users homework has not already been completed
                 res.json({res: false, message: "Homework already completed"});
             }
             else{
                 db.query("SELECT * FROM homeworkset WHERE hwID = ? AND quizID = ?", [hwID, quizID], (err, results) =>{
-                    if (err) throw err;
+                    if (err) res.send({errorMsg: err});
                     if (results.length == 0){
+                        //Ensures that there is no mismatch in the query strings. This prevents users from editing the query string and accessing homeworks they do not have permission to complete
                         res.json({res: false, message: "Invalid homework; Quiz does not match homework set"});
                     }
                     else{
+                        //this is the case if the homework is valid;
                         res.json({res: true});
                     }
                 })
@@ -352,31 +371,37 @@ module.exports = function (app, path, session, db){
         });
     })
 
+    //this gets a random question from the database. This takes into account past performance to give the user questions they havent come across before and ones which they need to improve on
     app.post("/getQuestion", (req, res) => {
         var userID = req.session.user.userID;
         db.query("SELECT * FROM analytics WHERE userID = ?", [userID], (err, results) => {
-            if (err) throw err;
+            if (err) res.send({errorMsg: err});
             var answeredList = results;
             db.query("SELECT * FROM question", (err, results) => {
-                if (err) throw err;
+                if (err) res.send({errorMsg: err});
                 var allQuestions = results;
                 var precendenceList = [];
+
                 answeredList.sort((a,b) => b.avgTime - a.avgTime); //sorts the list by time taken to answer
+
                 for (var i = 0; i < answeredList.length; i++){
-                    var timePrecedence = 2.4**-i * 100 * answeredList[i].avgTime;
+                    var timePrecedence = 2.4**-i * 100 * answeredList[i].avgTime; //This is the scoring function. See design document for details on this
                     var dateAnswered = answeredList[i].lastAnswered;
+
                     var timeDifference = (new Date() - dateAnswered);
                     var totalPrecedence = (timeDifference * 0.5) + timePrecedence;
                     answeredList[i].precedence = totalPrecedence;
+
                     var questionObj = allQuestions.filter((x) => {return x.questionID == answeredList[i].questionID})[0];
-                    //I dont know how this is as quick as it is but i should look into a different way of handling this
                     for (var x = 0; x < totalPrecedence; x++){
-                        precendenceList.push(questionObj);
+                        precendenceList.push(questionObj); //for each question, add them to the precendceList as many times as their precendece.
+                        //this allows to change the probability of selecting a question when using a random number
                     }
                 }
                 let type = Math.floor(Math.random() * (100));
                 var question;
-                if (type > 50){
+                
+                if (type > 50){ //This is a 50/50 between a new question and an improvement question
                     let index = Math.floor(Math.random() * (allQuestions.length));
                     question = allQuestions[index];
                 }
@@ -384,11 +409,13 @@ module.exports = function (app, path, session, db){
                     let index = Math.floor(Math.random() * (precendenceList.length));
                     question = precendenceList[index];
                 }
+
                 res.json({questionData: question});
             });
         })
     });
 
+    //Saves results of a question to the analytics table
     app.post("/submitQuestionAnswer", (req, res) => {
         var questionID = req.body.questionID;
         var timeToAnswer = req.body.timeToAnswer;
@@ -402,7 +429,9 @@ module.exports = function (app, path, session, db){
         let hwID = req.body.hwID;
         let userID = req.session.user.userID;
         let questions = req.body.questions;
-        var query = util.promisify(db.query).bind(db);
+        
+        var query = util.promisify(db.query).bind(db); //this binds a promise to the db.query function allowing it to be completed asynchronously
+        
         for (var i = 0; i < questions.length; i++){
             let result = questions[i].result;
             let timetaken = questions[i].timetaken;
@@ -423,7 +452,7 @@ module.exports = function (app, path, session, db){
     app.post("/getQuizByID", (req, res) => {
         let quizID = req.body.quizID;
         db.query("SELECT * FROM question, questionmapping WHERE question.questionID = questionmapping.questionID and questionmapping.quizID = ?", [quizID], (err, results) => {
-            if (err) throw err;
+            if (err) res.send({errorMsg: err});
             res.json({questions: results});
         })
     })
@@ -441,7 +470,7 @@ function getSocketObj(sockets, socketID){
 
 function saveAnswer(db, userID, questionID, timeToAnswer, result){
     db.query("SELECT * FROM analytics WHERE userID = ? AND questionID = ?", [userID, questionID],(err, results) => {
-        if (err) throw err;
+        if (err) res.send({errorMsg: err});
         if (results.length > 0){
             var newAvg;
             var currTotal = results[0].timesAnswered;
@@ -460,10 +489,10 @@ function saveAnswer(db, userID, questionID, timeToAnswer, result){
             else{
                 newAvg = timeToAnswer;
             }
-            db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [newAvg, currTotal + 1, userID, questionID], (err, results) => {if (err) throw err;});
+            db.query("UPDATE analytics SET avgTime = ?, timesAnswered = ?, lastAnswered = NOW() WHERE userID = ? and questionID = ?", [newAvg, currTotal + 1, userID, questionID], (err, results) => {if (err) res.send({errorMsg: err});});
         }
         else{
-            db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())", [userID, questionID, timeToAnswer], (err, results) => {if (err) throw err;});
+            db.query("INSERT INTO analytics VALUES (?, ?, ?, 1, NOW())", [userID, questionID, timeToAnswer], (err, results) => {if (err) res.send({errorMsg: err});});
         }
     });
 }

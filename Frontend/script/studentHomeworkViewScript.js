@@ -5,6 +5,7 @@ $(document).ready(() => {
     homeworks = [];
     activeHwID = 0;
     $.post("/getUserHomework", (data) => {
+        console.log(data.homework)
         homeworks = data.homework;
         for (var i = 0; i < homeworks.length; i++){
             let hw = homeworks[i];

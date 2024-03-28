@@ -29,6 +29,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 //This includes the backendFiles
 require(__dirname + "/backendScript/loginHandler.js")(app, path, crypto, salt, bodyParser, session, con);
 require(__dirname + "/backendScript/homePage.js")(app, path, crypto, salt, bodyParser, session, con);
+require(__dirname + "/backendScript/classManagement.js")(app, path, crypto, salt, bodyParser, session, con);
 require(__dirname + "/backendScript/quizLogic.js")(app, path, session, con);
 
 app.get("/", (req, res) => {

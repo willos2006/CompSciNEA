@@ -61,9 +61,9 @@ module.exports = function(app, path, crypto, salt, bodyParser, session, db){
 
         if (!lengthReq) {res.json({valid: false, message: "Fields are empty"}); return;}
         if (!hasSymbol) {res.json({valid: false, message: "Invalid email"}); return;}
-        db.query("SELECT * FROM `userdets` WHERE `email` = ?", [email], (err, result) => {
-            emailMatches = result.length;
-            if(emailMatches > 0){res.json({valid: false, message: "This email is already in use."}); return;}
+        db.query("SELECT * FROM `userdets` WHERE `email` = ? OR `username` = ?", [email, username], (err, result) => {
+            userMatches = result.length;
+            if(userMatches > 0){res.json({valid: false, message: "This email or username is already in use."}); return;}
 
             let passHash = crypto.pbkdf2Sync(password, salt, 1000, 64, `sha512`).toString("hex");
 
